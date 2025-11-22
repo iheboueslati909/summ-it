@@ -1,4 +1,10 @@
 import { getValidNotionToken } from '../auth/notion';
+import {
+    NotionPage,
+    NotionDatabase,
+    CreatePageResponse,
+    AppendBlockChildrenResponse,
+} from './types';
 
 const NOTION_API_BASE = 'https://api.notion.com/v1';
 const NOTION_VERSION = '2022-06-28';
@@ -61,8 +67,12 @@ export class NotionClient {
     }
 
     // Create page in a database
-    async createPageInDatabase(databaseId: string, properties: any, children: any[]) {
-        return this.request('/pages', {
+    async createPageInDatabase(
+        databaseId: string,
+        properties: any,
+        children: any[]
+    ) {
+        return this.request<CreatePageResponse>('/pages', {
             method: 'POST',
             body: JSON.stringify({
                 parent: { database_id: databaseId },
@@ -74,7 +84,7 @@ export class NotionClient {
 
     // Append blocks to a page
     async appendBlocks(pageId: string, children: any[]) {
-        return this.request(`/blocks/${pageId}/children`, {
+        return this.request<AppendBlockChildrenResponse>(`/blocks/${pageId}/children`, {
             method: 'PATCH',
             body: JSON.stringify({ children }),
         });
