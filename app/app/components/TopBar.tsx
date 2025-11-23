@@ -1,6 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface TopBarProps {
     workspaceName?: string;
@@ -15,63 +17,28 @@ export function TopBar({ workspaceName }: TopBarProps) {
     }
 
     return (
-        <header style={styles.header}>
-            <div style={styles.left}>
-                <span style={styles.logo}>📺</span>
-                <span style={styles.title}>YouTube → Notion</span>
+        <header className="flex justify-between items-center px-6 py-3 bg-background border-b">
+            <div className="flex items-center gap-2">
+                <span className="text-xl">📺</span>
+                <span className="font-semibold text-sm text-foreground">
+                    YouTube → Notion
+                </span>
             </div>
 
-            <div style={styles.right}>
+            <div className="flex items-center gap-4">
                 {workspaceName && (
-                    <span style={styles.workspace}>{workspaceName}</span>
+                    <Badge variant="secondary" className="text-xs">
+                        {workspaceName}
+                    </Badge>
                 )}
-                <button onClick={handleLogout} style={styles.logoutBtn}>
+                <Button
+                    onClick={handleLogout}
+                    variant="outline"
+                    size="sm"
+                >
                     Disconnect
-                </button>
+                </Button>
             </div>
         </header>
     );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-    header: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '0.75rem 1.5rem',
-        background: '#fff',
-        borderBottom: '1px solid #e5e5e5',
-    },
-    left: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-    },
-    logo: { fontSize: '1.25rem' },
-    title: {
-        fontWeight: 600,
-        fontSize: '0.95rem',
-        color: '#111',
-    },
-    right: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1rem',
-    },
-    workspace: {
-        fontSize: '0.85rem',
-        color: '#666',
-        padding: '0.25rem 0.5rem',
-        background: '#f3f4f6',
-        borderRadius: '4px',
-    },
-    logoutBtn: {
-        padding: '0.4rem 0.75rem',
-        fontSize: '0.8rem',
-        color: '#666',
-        background: 'transparent',
-        border: '1px solid #ddd',
-        borderRadius: '4px',
-        cursor: 'pointer',
-    },
-};
