@@ -147,3 +147,24 @@ export function extractIcon(result: NotionSearchResult): string | undefined {
 
     return undefined;
 }
+
+export function splitTextIntoBlocks(text: string, maxLength: number = 2000): string[] {
+    const blocks: string[] = [];
+    let currentBlock = '';
+
+    const sentences = text.split('. ');
+    for (const sentence of sentences) {
+        if ((currentBlock + sentence).length > maxLength && currentBlock.length > 0) {
+            blocks.push(currentBlock);
+            currentBlock = sentence + '. ';
+        } else {
+            currentBlock += sentence + '. ';
+        }
+    }
+
+    if (currentBlock.length > 0) {
+        blocks.push(currentBlock);
+    }
+
+    return blocks;
+}

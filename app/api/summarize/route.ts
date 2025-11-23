@@ -2,12 +2,12 @@
 import { NextResponse } from 'next/server';
 import { YoutubeTranscript } from 'youtube-transcript';
 import { getSession } from '@/lib/auth/session';
-import { NotionClient } from '@/lib/notion/client';
+import { NotionClient, splitTextIntoBlocks } from '@/lib/notion/client';
 import { SummarizeRequest } from '@/types';
-import { summarizeTranscript } from '@/lib/ai/summarizer';
-import { MockLLM } from '@/lib/ai/llm-mock';
+import { summarizeChunk, summarizeTranscript } from '@/lib/ai/summarizer';
+import { getYoutubeTranscript } from '@/lib/youtube/supadata';
 
-const llm = new MockLLM();
+// const llm = new GeminiLLM();
 
 export async function POST(req: Request) {
     try {
@@ -28,24 +28,39 @@ export async function POST(req: Request) {
         // ---- 1. Get transcript ----
         let transcriptText = '';
         try {
-            const transcript = await YoutubeTranscript.fetchTranscript(youtubeUrl, {
-                lang: language === 'auto' ? undefined : language,
-            });
-            transcriptText = transcript.map(t => t.text).join(' ');
+            const transcript = await getYoutubeTranscript(youtubeUrl,
+                language === 'auto' ? undefined : language
+            );
+            transcriptText = transcript.content.toString();
+            // transcriptText = transcript.map(t => t.text).join(' ');
         } catch (err) {
             return NextResponse.json({
                 error: 'No transcript available for this video',
             }, { status: 400 });
         }
 
+        console.log("***************** Fetched transcript is ", transcriptText);
         // ---- 2. Summarize with LLM ----
-        const summary = await llm.summarizeTranscript(transcriptText, language);
+        const summary = await summarizeTranscript({ transcript: transcriptText, language });
 
         // ---- 3. Create or append in Notion ----
         let notionUrl = '';
 
         if (targetSourceType === 'database') {
-            // create new page inside database
+            const textBlocks = splitTextIntoBlocks(summary);
+            const blocks = textBlocks.map((blockText, index) => ({
+                object: 'block' as const,
+                type: 'paragraph' as const,
+                paragraph: {
+                    rich_text: [
+                        {
+                            type: 'text' as const,
+                            text: { content: blockText }
+                        }
+                    ]
+                }
+            }));
+
             const created = await notion.createPageInDatabase(
                 targetSourceId,
                 {
@@ -58,45 +73,34 @@ export async function POST(req: Request) {
                         ]
                     }
                 },
-                [
-                    {
-                        object: 'block',
-                        type: 'paragraph',
-                        paragraph: {
-                            rich_text: [
-                                { type: 'text', text: { content: summary } }
-                            ]
-                        }
-                    }
-                ]
+                blocks
             );
-
             notionUrl = created.url;
 
         } else if (targetSourceType === 'page') {
-            // append blocks to an existing page
-            await notion.appendBlocks(targetSourceId, [
+            const textBlocks = splitTextIntoBlocks(summary);
+            const blocks = [
                 {
-                    object: 'block',
-                    type: 'heading_2',
+                    object: 'block' as const,
+                    type: 'heading_2' as const,
                     heading_2: {
                         rich_text: [
                             { type: 'text', text: { content: 'YouTube Summary' } }
                         ]
                     }
                 },
-                {
-                    object: 'block',
-                    type: 'paragraph',
+                ...textBlocks.map(blockText => ({
+                    object: 'block' as const,
+                    type: 'paragraph' as const,
                     paragraph: {
                         rich_text: [
-                            { type: 'text', text: { content: summary } }
+                            { type: 'text', text: { content: blockText } }
                         ]
                     }
-                }
-            ]);
+                }))
+            ];
 
-            // Page URLs in Notion = frontend URL
+            await notion.appendBlocks(targetSourceId, blocks);
             notionUrl = `https://www.notion.so/${targetSourceId.replace(/-/g, '')}`;
         }
 
