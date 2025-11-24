@@ -1,13 +1,10 @@
-// lib/ai/summarizer.ts
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { retry } from "./retry-helper";
 
-// -----------------------------
-// CONFIG
-// -----------------------------
 const USE_MOCK_LLM = process.env.USE_MOCK_LLM === "true";
-
-const MAX_CHARS_PER_CHUNK = 6000; // Safe for Flash Lite
-const MAX_TRANSCRIPT_CHARS = 80000; // Too large → warn or fail
+const MAX_CHARS_PER_CHUNK = 6000;
+const MAX_TRANSCRIPT_CHARS = 200000;
+const CHUNK_OVERLAP = 400;
 
 let model: ReturnType<GoogleGenerativeAI["getGenerativeModel"]> | null = null;
 
@@ -15,68 +12,123 @@ if (!USE_MOCK_LLM) {
     if (!process.env.GEMINI_API_KEY) {
         throw new Error("GEMINI_API_KEY is not defined");
     }
-
     const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     model = client.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 }
 
-// -----------------------------
-// HELPERS
-// -----------------------------
-function chunkText(text: string, maxSize = MAX_CHARS_PER_CHUNK): string[] {
+function chunkTextSmart(text: string, maxSize = MAX_CHARS_PER_CHUNK): string[] {
     const chunks: string[] = [];
     let current = "";
 
-    // Split by sentences to avoid breaking mid-phrase
-    for (const part of text.split(".")) {
-        const piece = part.trim() + ".";
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
 
-        if ((current + piece).length > maxSize) {
+    for (const sentence of sentences) {
+        const trimmed = sentence.trim();
+        if (!trimmed) continue;
+
+        if ((current + trimmed).length > maxSize && current.length > 0) {
             chunks.push(current.trim());
-            current = piece;
-        } else {
-            current += piece;
+            current = sentences.slice(-3).join("").trim();
         }
+
+        current += " " + trimmed;
     }
 
     if (current.trim().length > 0) {
         chunks.push(current.trim());
     }
 
-    return chunks;
+    return chunks.filter(c => c.length > 50);
 }
 
-// -----------------------------
-// LLM CALL (Single Chunk)
-// -----------------------------
-export async function summarizeChunk(text: string, language: string): Promise<string> {
-    if (USE_MOCK_LLM) {
-        return `MOCK CHUNK SUMMARY (${language}): ${text.substring(0, 120)}...`;
-    }
+const CHUNK_SUMMARY_PROMPT = (text: string, language: string, chunkNum: number, totalChunks: number) => `
+You are an expert content analyst. Summarize this section of a transcript.
 
-    const prompt = `
-You are a professional summarizer.
-Summarize the following transcript section clearly in ${language}.
-Keep it concise. Do not output more than 5 paragraphs.
-Do NOT hallucinate missing content.
+CRITICAL INSTRUCTIONS:
+1. Extract the main points, key arguments, and takeaways
+2. Preserve specific details: names, dates, statistics, technical terms
+3. Maintain narrative flow - this is chunk ${chunkNum}/${totalChunks}
+4. Use bullet points for clarity but keep it readable
+5. Output in ${language}
+6. Max 4 paragraphs or equivalent bullets
 
-Transcript section:
+TRANSCRIPT SECTION:
 ${text}
-`;
 
-    const result = await model!.generateContent(prompt);
-    const summary = result.response.text().trim();
+SUMMARY:`;
 
-    if (!summary) {
-        throw new Error("Gemini returned an empty summary chunk");
+const SYNTHESIS_PROMPT = (summaries: string[], language: string) => `
+You are a master editor. Your job is to synthesize these partial summaries into ONE cohesive final summary.
+
+CRITICAL INSTRUCTIONS:
+1. Remove redundancy
+2. Organize by theme
+3. Preserve important details
+4. Output in ${language}
+5. Format: Opening + key sections + conclusion
+6. Target length: 8–12 paragraphs
+
+PARTIAL SUMMARIES:
+${summaries.map((s, i) => `--- Summary ${i + 1} ---\n${s}`).join("\n\n")}
+
+FINAL:`;
+
+export async function summarizeChunk(
+    text: string,
+    language: string,
+    chunkNum = 1,
+    totalChunks = 1
+): Promise<string> {
+
+    if (USE_MOCK_LLM) {
+        return `MOCK SUMMARY (chunk ${chunkNum})`;
     }
 
-    return summary;
+    const prompt = CHUNK_SUMMARY_PROMPT(text, language, chunkNum, totalChunks);
+
+    try {
+        const summary = await retry(async () => {
+            const result = await model!.generateContent({
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                generationConfig: {
+                    temperature: 0.3,
+                    topP: 0.9
+                },
+            });
+
+            const output = result.response.text().trim();
+
+            if (!output) {
+                throw new Error(`Empty LLM response on chunk ${chunkNum}`);
+            }
+
+            return output;
+        }, {
+            retries: 3,
+            baseDelayMs: 600,
+            onRetry: (err, attempt) => {
+                console.warn(
+                    `⚠️ Chunk ${chunkNum} retry ${attempt}/3 — Reason: ${err?.message}`
+                );
+            }
+        });
+
+        return summary;
+
+    } catch (err) {
+        console.error(`❌ Chunk ${chunkNum} failed after retries`, err);
+
+        // isolate the damage: produce a stable fallback
+        return [
+            `⚠️ **FALLBACK SUMMARY FOR CHUNK ${chunkNum}**`,
+            `The AI model failed to summarize this section after multiple attempts.`,
+            ``,
+            `🧩 Chunk preview (truncated):`,
+            text.substring(0, 400) + "...",
+        ].join("\n");
+    }
 }
 
-// -----------------------------
-// MAIN PIPELINE
-// -----------------------------
 export async function summarizeTranscript({
     transcript,
     language,
@@ -84,37 +136,56 @@ export async function summarizeTranscript({
     transcript: string;
     language: string;
 }): Promise<string> {
-    if (!transcript) {
-        throw new Error("Transcript is required");
-    }
-    if (transcript.length < 20) {
-        throw new Error(`Transcript too short to summarize = (${transcript} )`);
-    }
 
-    if (transcript.length > MAX_TRANSCRIPT_CHARS) {
-        throw new Error(
-            `Transcript too large (${transcript.length} chars). Try a shorter video.`
-        );
-    }
+    if (!transcript) throw new Error("Transcript is required");
+    if (transcript.length < 50) throw new Error("Transcript too short");
+    if (transcript.length > MAX_TRANSCRIPT_CHARS)
+        throw new Error(`Transcript too large (${transcript.length} chars)`);
 
-    // 1. Split transcript
-    const chunks = chunkText(transcript);
-    // console.log("CHUNKS:", chunks.length); // optional debugging
+    // 1) Chunking
+    const chunks = chunkTextSmart(transcript);
+    console.log(`Generated ${chunks.length} chunks`);
 
-    // 2. Summarize each chunk (Map phase)
-    const partialSummaries: string[] = [];
-    for (const chunk of chunks) {
-        const summary = await summarizeChunk(chunk, language);
-        partialSummaries.push(summary);
-    }
+    if (chunks.length === 0) throw new Error("No valid chunks created");
 
-    // 3. Combine and reduce (Reduce phase)
-    const combined = partialSummaries.join("\n\n");
-
-    const finalSummary = await summarizeChunk(
-        `Combine these partial summaries into one final summary in ${language}:\n\n${combined}`,
-        language
+    // 2) Chunk summarization
+    const partialSummaries = await Promise.all(
+        chunks.map((chunk, idx) => summarizeChunk(chunk, language, idx + 1, chunks.length))
     );
 
-    return finalSummary.trim();
+    // 3) If tiny transcript → skip synthesis
+    if (chunks.length <= 2) {
+        console.log("Small transcript → returning merged partial summaries");
+        return partialSummaries.join("\n\n");
+    }
+
+    // 4) Synthesis stage (with failover)
+    try {
+        const synthesis = await model!.generateContent({
+            contents: [
+                {
+                    role: "user",
+                    parts: [{ text: SYNTHESIS_PROMPT(partialSummaries, language) }],
+                },
+            ],
+            generationConfig: {
+                temperature: 0.4,
+                topP: 0.95,
+            },
+        });
+
+        const final = synthesis.response.text().trim();
+        if (!final) throw new Error("Empty synthesis output");
+
+        return final;
+    } catch (err) {
+        console.error("❌ Synthesis failed", err);
+
+        // Last-resort fallback
+        return [
+            "⚠️ **FINAL SYNTHESIS FAILED — Using raw chunk summaries instead**",
+            "",
+            ...partialSummaries
+        ].join("\n\n");
+    }
 }
