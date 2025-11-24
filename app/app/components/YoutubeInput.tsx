@@ -16,7 +16,7 @@ export function YouTubeInput({ value, onChange, error }: YouTubeInputProps) {
 
     return (
         <div className="flex flex-col gap-2">
-            <Label>
+            <Label className="text-sm font-medium text-muted-foreground">
                 YouTube Video URL
             </Label>
             <Input

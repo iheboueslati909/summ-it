@@ -64,7 +64,7 @@ export function NotionSourceSelector({ value, onChange }: NotionSourceSelectorPr
     if (loading) {
         return (
             <div className="flex flex-col gap-2">
-                <Label>Save to Notion</Label>
+                <Label className="text-sm font-medium text-muted-foreground">Save to Notion</Label>
                 <Skeleton className="h-10 w-full" />
             </div>
         );
@@ -74,7 +74,7 @@ export function NotionSourceSelector({ value, onChange }: NotionSourceSelectorPr
     if (error) {
         return (
             <div className="flex flex-col gap-2">
-                <Label>Save to Notion</Label>
+                <Label className="text-sm font-medium text-muted-foreground">Save to Notion</Label>
                 <div className="flex items-center justify-between p-2.5 text-sm text-destructive bg-destructive/10 rounded-md">
                     <span>{error}</span>
                     <Button
@@ -94,7 +94,7 @@ export function NotionSourceSelector({ value, onChange }: NotionSourceSelectorPr
     if (sources.length === 0) {
         return (
             <div className="flex flex-col gap-2">
-                <Label>Save to Notion</Label>
+                <Label className="text-sm font-medium text-muted-foreground">Save to Notion</Label>
                 <div className="p-4 bg-muted/50 rounded-md text-center">
                     <p className="text-sm text-muted-foreground mb-2">
                         No pages shared with this integration.
@@ -118,7 +118,7 @@ export function NotionSourceSelector({ value, onChange }: NotionSourceSelectorPr
     // Normal state with sources
     return (
         <div className="flex flex-col gap-2">
-            <Label>Save to Notion</Label>
+            <Label className="text-sm font-medium text-muted-foreground">Save to Notion</Label>
             <Select value={value?.id || ''} onValueChange={handleValueChange}>
                 <SelectTrigger>
                     <SelectValue placeholder="Select a page or database" />
