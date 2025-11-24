@@ -41,12 +41,16 @@ export default async function LandingPage({
             </div>
           )}
 
-          <Button asChild size="lg" className="w-full">
-            <a href="/api/auth/notion">
+          <form action="/api/auth/notion" method="GET">
+            <Button
+              size="lg"
+              className="w-full"
+              type="submit"
+            >
               <NotionIcon className="mr-2 h-5 w-5" />
               Connect Notion
-            </a>
-          </Button>
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </main>
