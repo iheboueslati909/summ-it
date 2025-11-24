@@ -16,7 +16,7 @@ export default async function AppLayout({
     if (!user) redirect('/');
 
     return (
-        <div style={{ minHeight: '100vh', background: '#fafafa' }}>
+        <div style={{ minHeight: '100vh' }}>
             <TopBar workspaceName={user.notion.workspaceName} />
             {children}
         </div>
