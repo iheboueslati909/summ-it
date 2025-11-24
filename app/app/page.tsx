@@ -57,7 +57,7 @@ export default function AppPage() {
 
     return (
         <main className="flex justify-center p-6 md:p-10 w-full">
-            <Card className="w-full max-w-lg shadow-sm border rounded-2xl">
+            <Card className="w-full max-w-4xl shadow-sm border rounded-2xl">
                 <CardHeader>
                     <CardTitle className="text-2xl font-semibold">
                         Summarize YouTube Video
@@ -67,33 +67,36 @@ export default function AppPage() {
                     </CardDescription>
                 </CardHeader>
 
-                <CardContent className="flex flex-col gap-6">
-                    <YouTubeInput value={youtubeUrl} onChange={setYoutubeUrl} />
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="flex flex-col gap-6">
+                        <YouTubeInput value={youtubeUrl} onChange={setYoutubeUrl} />
+                        <SummaryTypeSelector value={summaryType} onChange={setSummaryType} />
 
-                    <LanguageSelector value={language} onChange={setLanguage} />
+                    </div>
 
-                    <SummaryTypeSelector value={summaryType} onChange={setSummaryType} />
+                    <div className="flex flex-col gap-6">
+                        <LanguageSelector value={language} onChange={setLanguage} />
+                        <NotionSourceSelector value={targetSource} onChange={setTargetSource} />
 
-                    <NotionSourceSelector value={targetSource} onChange={setTargetSource} />
+                        <Separator />
 
-                    <Separator className="my-2" />
+                        <div className="flex flex-col gap-3">
+                            <Button
+                                onClick={handleSummarize}
+                                disabled={!canSubmit}
+                                className="w-full text-base py-5 rounded-xl"
+                            >
+                                {isSubmitting ? "Processing..." : "✨ Summarize"}
+                            </Button>
 
-                    <div className="flex flex-col gap-3">
-                        <Button
-                            onClick={handleSummarize}
-                            disabled={!canSubmit}
-                            className="w-full text-base py-5 rounded-xl"
-                        >
-                            {isSubmitting ? "Processing..." : "✨ Summarize"}
-                        </Button>
-
-                        <Button
-                            variant="outline"
-                            onClick={openNotionSettings}
-                            className="w-full rounded-xl"
-                        >
-                            + Add more pages
-                        </Button>
+                            <Button
+                                variant="outline"
+                                onClick={openNotionSettings}
+                                className="w-full rounded-xl"
+                            >
+                                + Add more pages
+                            </Button>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
