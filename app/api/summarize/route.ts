@@ -17,7 +17,7 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json() as SummarizeRequest;
-        const { youtubeUrl, language, targetSourceId, targetSourceType } = body;
+        const { youtubeUrl, language, targetSourceId, targetSourceType, summaryType } = body;
 
         if (!youtubeUrl || !targetSourceId || !targetSourceType) {
             return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
@@ -41,7 +41,11 @@ export async function POST(req: Request) {
 
         console.log("***************** Fetched transcript is ", transcriptText);
         // ---- 2. Summarize with LLM ----
-        const summary = await summarizeTranscript({ transcript: transcriptText, language });
+        const summary = await summarizeTranscript({
+            transcript: transcriptText,
+            language,
+            summaryType: summaryType as any
+        });
 
         // ---- 3. Create or append in Notion ----
         let notionUrl = '';

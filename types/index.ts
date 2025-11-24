@@ -11,6 +11,7 @@ export interface SummarizeRequest {
     language: string;
     targetSourceId: string;
     targetSourceType: 'page' | 'database';
+    summaryType?: string;
 }
 
 export const SUPPORTED_LANGUAGES = [

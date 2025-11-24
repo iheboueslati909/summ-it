@@ -7,11 +7,13 @@ import { Separator } from "@/components/ui/separator";
 import { LanguageSelector } from "./components/LanguageSelector";
 import { NotionSourceSelector } from "./components/NotionSourceSelector";
 import { YouTubeInput } from "./components/YoutubeInput";
+import { SummaryTypeSelector } from "./components/SummaryTypeSelector";
 import { NotionSource } from "@/types";
 
 export default function AppPage() {
     const [youtubeUrl, setYoutubeUrl] = useState("");
     const [language, setLanguage] = useState("auto");
+    const [summaryType, setSummaryType] = useState("informative");
     const [targetSource, setTargetSource] = useState<NotionSource | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -31,6 +33,7 @@ export default function AppPage() {
                 body: JSON.stringify({
                     youtubeUrl,
                     language,
+                    summaryType,
                     targetSourceId: targetSource!.id,
                     targetSourceType: targetSource!.type,
                 }),
@@ -68,6 +71,8 @@ export default function AppPage() {
                     <YouTubeInput value={youtubeUrl} onChange={setYoutubeUrl} />
 
                     <LanguageSelector value={language} onChange={setLanguage} />
+
+                    <SummaryTypeSelector value={summaryType} onChange={setSummaryType} />
 
                     <NotionSourceSelector value={targetSource} onChange={setTargetSource} />
 

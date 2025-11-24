@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { retry } from "./retry-helper";
+import { CHUNK_SUMMARY_PROMPT, GET_SYNTHESIS_PROMPT, SummaryType } from "./prompts";
 
 const USE_MOCK_LLM = process.env.USE_MOCK_LLM === "true";
 const MAX_CHARS_PER_CHUNK = 6000;
@@ -40,38 +41,6 @@ function chunkTextSmart(text: string, maxSize = MAX_CHARS_PER_CHUNK): string[] {
 
     return chunks.filter(c => c.length > 50);
 }
-
-const CHUNK_SUMMARY_PROMPT = (text: string, language: string, chunkNum: number, totalChunks: number) => `
-You are an expert content analyst. Summarize this section of a transcript.
-
-CRITICAL INSTRUCTIONS:
-1. Extract the main points, key arguments, and takeaways
-2. Preserve specific details: names, dates, statistics, technical terms
-3. Maintain narrative flow - this is chunk ${chunkNum}/${totalChunks}
-4. Use bullet points for clarity but keep it readable
-5. Output in ${language}
-6. Max 4 paragraphs or equivalent bullets
-
-TRANSCRIPT SECTION:
-${text}
-
-SUMMARY:`;
-
-const SYNTHESIS_PROMPT = (summaries: string[], language: string) => `
-You are a master editor. Your job is to synthesize these partial summaries into ONE cohesive final summary.
-
-CRITICAL INSTRUCTIONS:
-1. Remove redundancy
-2. Organize by theme
-3. Preserve important details
-4. Output in ${language}
-5. Format: Opening + key sections + conclusion
-6. Target length: 8–12 paragraphs
-
-PARTIAL SUMMARIES:
-${summaries.map((s, i) => `--- Summary ${i + 1} ---\n${s}`).join("\n\n")}
-
-FINAL:`;
 
 export async function summarizeChunk(
     text: string,
@@ -132,9 +101,11 @@ export async function summarizeChunk(
 export async function summarizeTranscript({
     transcript,
     language,
+    summaryType = 'informative'
 }: {
     transcript: string;
     language: string;
+    summaryType?: SummaryType;
 }): Promise<string> {
 
     if (!transcript) throw new Error("Transcript is required");
@@ -165,7 +136,7 @@ export async function summarizeTranscript({
             contents: [
                 {
                     role: "user",
-                    parts: [{ text: SYNTHESIS_PROMPT(partialSummaries, language) }],
+                    parts: [{ text: GET_SYNTHESIS_PROMPT(partialSummaries, language, summaryType) }],
                 },
             ],
             generationConfig: {
