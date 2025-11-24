@@ -15,8 +15,8 @@ export function YouTubeInput({ value, onChange, error }: YouTubeInputProps) {
     const invalid = error || (!isValid && value);
 
     return (
-        <div className="flex flex-col gap-2 w-full">
-            <Label className="text-sm font-medium text-muted-foreground">
+        <div className="flex flex-col gap-2">
+            <Label>
                 YouTube Video URL
             </Label>
             <Input
