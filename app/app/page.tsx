@@ -4,18 +4,26 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { LanguageSelector } from "./components/LanguageSelector";
-import { NotionSourceSelector } from "./components/NotionSourceSelector";
-import { YouTubeInput } from "./components/YoutubeInput";
-import { SummaryTypeSelector } from "./components/SummaryTypeSelector";
+import { LanguageSelector } from "../../components/LanguageSelector";
+import { NotionSourceSelector } from "../../components/NotionSourceSelector";
+import { YouTubeInput } from "../../components/YoutubeInput";
+import { SummaryTypeSelector } from "../../components/SummaryTypeSelector";
 import { NotionSource } from "@/types";
+import { HistorySidebar } from "@/components/history-sidebar";
+import { Summary } from "@/lib/db/models/summary";
+import { HistoryCard } from "@/components/history-card";
 
 export default function AppPage() {
+    // Summarizer State
     const [youtubeUrl, setYoutubeUrl] = useState("");
     const [language, setLanguage] = useState("auto");
     const [summaryType, setSummaryType] = useState("informative");
     const [targetSource, setTargetSource] = useState<NotionSource | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // History State
+    const [selectedSummary, setSelectedSummary] = useState<Summary | null>(null);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const isValidUrl = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[\w-]+/.test(
         youtubeUrl
@@ -44,6 +52,7 @@ export default function AppPage() {
             const data = await res.json();
             alert(`Summary saved! ${data.notionUrl || ""}`);
             setYoutubeUrl("");
+            setRefreshTrigger(prev => prev + 1); // Refresh history list
         } catch (err) {
             alert("Something went wrong. Please try again.");
         } finally {
@@ -55,51 +64,75 @@ export default function AppPage() {
         window.open("https://notion.so/my-integrations", "_blank");
     }
 
+    const handleHistoryUpdate = () => {
+        setRefreshTrigger(prev => prev + 1);
+        // If the selected summary was deleted, clear selection
+        // Note: Ideally we'd check if it still exists, but for now this refresh will handle the list
+    };
+
     return (
-        <main className="flex justify-center p-6 md:p-10 w-full">
-            <Card className="w-full max-w-4xl shadow-sm border rounded-2xl">
-                <CardHeader>
-                    <CardTitle className="text-2xl font-semibold">
-                        Summarize YouTube Video
-                    </CardTitle>
-                    <CardDescription>
-                        Extract subtitles, generate a summary, and save it directly to Notion.
-                    </CardDescription>
-                </CardHeader>
+        <div className="flex h-[calc(100vh-65px)] overflow-hidden">
+            <HistorySidebar
+                selectedId={selectedSummary?._id?.toString() || null}
+                onSelect={setSelectedSummary}
+                refreshTrigger={refreshTrigger}
+            />
 
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="flex flex-col gap-6">
-                        <YouTubeInput value={youtubeUrl} onChange={setYoutubeUrl} />
-                        <SummaryTypeSelector value={summaryType} onChange={setSummaryType} />
+            <main className="flex-1 overflow-y-auto p-6 md:p-10 bg-background">
+                <div className="max-w-4xl mx-auto h-full">
+                    {selectedSummary ? (
+                        <HistoryCard
+                            summary={selectedSummary}
+                            onUpdate={handleHistoryUpdate}
+                            variant="detail"
+                        />
+                    ) : (
+                        <Card className="w-full shadow-sm border rounded-2xl">
+                            <CardHeader>
+                                <CardTitle className="text-2xl font-semibold">
+                                    Summarize YouTube Video
+                                </CardTitle>
+                                <CardDescription>
+                                    Extract subtitles, generate a summary, and save it directly to Notion.
+                                </CardDescription>
+                            </CardHeader>
 
-                    </div>
+                            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="flex flex-col gap-6">
+                                    <YouTubeInput value={youtubeUrl} onChange={setYoutubeUrl} />
+                                    <SummaryTypeSelector value={summaryType} onChange={setSummaryType} />
 
-                    <div className="flex flex-col gap-6">
-                        <LanguageSelector value={language} onChange={setLanguage} />
-                        <NotionSourceSelector value={targetSource} onChange={setTargetSource} />
+                                </div>
 
-                        <Separator />
+                                <div className="flex flex-col gap-6">
+                                    <LanguageSelector value={language} onChange={setLanguage} />
+                                    <NotionSourceSelector value={targetSource} onChange={setTargetSource} />
 
-                        <div className="flex flex-col gap-3">
-                            <Button
-                                onClick={handleSummarize}
-                                disabled={!canSubmit}
-                                className="w-full text-base py-5 rounded-xl"
-                            >
-                                {isSubmitting ? "Processing..." : "✨ Summarize"}
-                            </Button>
+                                    <Separator />
 
-                            <Button
-                                variant="outline"
-                                onClick={openNotionSettings}
-                                className="w-full rounded-xl"
-                            >
-                                + Add more pages
-                            </Button>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-        </main>
+                                    <div className="flex flex-col gap-3">
+                                        <Button
+                                            onClick={handleSummarize}
+                                            disabled={!canSubmit}
+                                            className="w-full text-base py-5 rounded-xl"
+                                        >
+                                            {isSubmitting ? "Processing..." : "✨ Summarize"}
+                                        </Button>
+
+                                        <Button
+                                            variant="outline"
+                                            onClick={openNotionSettings}
+                                            className="w-full rounded-xl"
+                                        >
+                                            + Add more pages
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+            </main>
+        </div>
     );
 }

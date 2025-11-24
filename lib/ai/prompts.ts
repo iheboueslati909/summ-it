@@ -83,6 +83,8 @@ GENERAL INSTRUCTIONS:
 4. Output in ${language}
 5. Format: Opening + key sections + conclusion
 6. Target length: 8–12 paragraphs
+7. use markdown formatting
+8. you can use tables
 
 PARTIAL SUMMARIES:
 ${summaries.map((s, i) => `--- Summary ${i + 1} ---\n${s}`).join("\n\n")}

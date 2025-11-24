@@ -1,8 +1,11 @@
+
 'use client';
 
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { History } from 'lucide-react';
 
 interface TopBarProps {
     workspaceName?: string;
@@ -10,6 +13,7 @@ interface TopBarProps {
 
 export function TopBar({ workspaceName }: TopBarProps) {
     const router = useRouter();
+    const pathname = usePathname();
 
     async function handleLogout() {
         await fetch('/api/auth/logout', { method: 'POST' });
@@ -18,12 +22,12 @@ export function TopBar({ workspaceName }: TopBarProps) {
 
     return (
         <header className="flex justify-between items-center px-6 py-3 bg-background border-b">
-            <div className="flex items-center gap-2">
+            <Link href="/app" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                 <span className="text-xl">📺</span>
                 <span className="font-semibold text-sm text-foreground">
                     YouTube → Notion
                 </span>
-            </div>
+            </Link>
 
             <div className="flex items-center gap-4">
                 {workspaceName && (

@@ -1,4 +1,3 @@
-// app/api/summarize/route.ts
 import { NextResponse } from 'next/server';
 import { YoutubeTranscript } from 'youtube-transcript';
 import { getSession } from '@/lib/auth/session';
@@ -6,6 +5,8 @@ import { NotionClient, splitTextIntoBlocks } from '@/lib/notion/client';
 import { SummarizeRequest } from '@/types';
 import { summarizeChunk, summarizeTranscript } from '@/lib/ai/summarizer';
 import { getYoutubeTranscript } from '@/lib/youtube/supadata';
+import { createSummary } from '@/lib/db/models/summary';
+import { extractVideoId } from '@/lib/db/models/transcript';
 
 // const llm = new GeminiLLM();
 
@@ -47,7 +48,27 @@ export async function POST(req: Request) {
             summaryType: summaryType as any
         });
 
-        // ---- 3. Create or append in Notion ----
+        // ---- 3. Save to History ----
+        try {
+            // Simple title extraction: first sentence or first 100 chars
+            const title = summary.split(/[.!?]/, 1)[0].substring(0, 150) || "Untitled Summary";
+            const videoId = extractVideoId(youtubeUrl) || undefined;
+
+            await createSummary({
+                userId: session.userId,
+                videoUrl: youtubeUrl,
+                videoId,
+                title,
+                content: summary,
+                summaryType,
+                language
+            });
+        } catch (dbErr) {
+            console.error('Failed to save summary to history:', dbErr);
+            // Don't fail the request if saving history fails, just log it
+        }
+
+        // ---- 4. Create or append in Notion ----
         let notionUrl = '';
 
         if (targetSourceType === 'database') {
