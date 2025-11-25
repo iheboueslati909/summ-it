@@ -49,9 +49,10 @@ export async function POST(req: Request) {
         });
 
         // ---- 3. Save to History ----
+        let title = '';
         try {
             // Simple title extraction: first sentence or first 100 chars
-            const title = summary.split(/[.!?]/, 1)[0].substring(0, 150) || "Untitled Summary";
+            title = summary.split(/[.!?]/, 1)[0].substring(0, 150) || "Untitled Summary";
             const videoId = extractVideoId(youtubeUrl) || undefined;
 
             await createSummary({
@@ -110,7 +111,7 @@ export async function POST(req: Request) {
                     type: 'heading_2' as const,
                     heading_2: {
                         rich_text: [
-                            { type: 'text', text: { content: 'YouTube Summary' } }
+                            { type: 'text', text: { content: title } }
                         ]
                     }
                 },
