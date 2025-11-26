@@ -1,10 +1,4 @@
-export type SummaryType =
-    | 'informative'
-    | 'descriptive'
-    | 'executive'
-    | 'narrative'
-    | 'critical'
-    | 'evaluative';
+import { SummaryType } from "@/lib/ai/types";
 
 export const SUMMARY_TYPES: { value: SummaryType; label: string; description: string }[] = [
     { value: 'informative', label: 'Informative', description: 'Objective report on main points' },
@@ -14,7 +8,6 @@ export const SUMMARY_TYPES: { value: SummaryType; label: string; description: st
     { value: 'critical', label: 'Critical', description: 'Analysis and evaluation of source material' },
     { value: 'evaluative', label: 'Evaluative', description: 'Judgment of quality or effectiveness' },
 ];
-
 export const CHUNK_SUMMARY_PROMPT = (text: string, language: string, chunkNum: number, totalChunks: number) => `
 You are an expert content analyst. Summarize this section of a transcript.
 

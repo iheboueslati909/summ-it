@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { randomBytes } from 'crypto';
-import { setStateCookie } from '@/lib/auth/session';
+import { setStateCookie } from '@/lib/auth';
 
 export async function GET() {
     const clientId = process.env.NOTION_CLIENT_ID;

@@ -1,16 +1,24 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { CHUNK_SUMMARY_PROMPT, GET_SYNTHESIS_PROMPT, SummaryType } from "./prompts";
+import { CHUNK_SUMMARY_PROMPT, GET_SYNTHESIS_PROMPT } from "./prompts";
+import { SummaryType } from "./types";
 import { acquireToken } from "../rate-limiter";
-import { chunkTextSmart, extractTitle, verifyTranscript } from "./helpers";
+import { chunkTextSmart, extractTitle, verifyTranscript } from "../utils";
 
 const USE_MOCK_LLM = process.env.USE_MOCK_LLM === "true";
 
 let model: ReturnType<GoogleGenerativeAI["getGenerativeModel"]> | null = null;
 
-if (!USE_MOCK_LLM) {
-    if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not defined");
-    const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    model = client.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+function getModel() {
+    if (USE_MOCK_LLM) return null;
+
+    if (!model) {
+        if (!process.env.GEMINI_API_KEY) {
+            throw new Error("GEMINI_API_KEY is not defined");
+        }
+        const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        model = client.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    }
+    return model;
 }
 
 export async function summarizeChunk(
@@ -22,6 +30,7 @@ export async function summarizeChunk(
 
     if (USE_MOCK_LLM) return `MOCK SUMMARY (chunk ${chunkNum})`;
 
+    const model = getModel();
     if (!model) throw new Error("LLM model not initialized");
 
     const prompt = CHUNK_SUMMARY_PROMPT(text, language, chunkNum, totalChunks);
@@ -74,6 +83,14 @@ export async function summarizeTranscript({
 
     // --- 3) Synthesis step ---
     try {
+
+        if (USE_MOCK_LLM) {
+            const mockSummary = `MOCK SYNTHESIS - Combined ${partialSummaries.length} chunk summaries:\n${partialSummaries.join('\n')}`;
+            const mockTitle = `MOCK TITLE - ${summaryType} Summary`;
+            return { summary: mockSummary, title: mockTitle };
+        }
+
+        const model = getModel();
         if (!model) throw new Error("LLM model not initialized");
 
         await acquireToken();

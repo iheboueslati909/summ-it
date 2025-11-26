@@ -27,22 +27,6 @@ export const SUPPORTED_LANGUAGES = [
     { code: 'auto', label: 'Auto-detect' },
 ] as const;
 
-export interface NotionSource {
-    id: string;
-    title: string;
-    type: 'page' | 'database';
-    icon?: string;
-    lastEdited?: string;
-}
-
-export interface SummarizeRequest {
-    youtubeUrl: string;
-    language: string;
-    targetSourceId: string;
-    targetSourceType: 'page' | 'database';
-    summaryType?: string;
-}
-
 export type TranscriptChunk = {
     text: string;
     offset?: number;

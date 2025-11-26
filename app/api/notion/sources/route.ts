@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth/session';
+import { getSession } from '@/lib/auth';
 import { NotionClient, extractTitle, extractIcon } from '@/lib/notion/client';
 import { NotionSource } from '@/types';
 

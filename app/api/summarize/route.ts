@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth/session';
+import { getSession } from '@/lib/auth';
 import { NotionClient, saveSummaryToNotion } from '@/lib/notion';
 import { SummarizeRequest } from '@/types';
-import { summarizeTranscript } from '@/lib/ai/summarizer';
+import { summarizeTranscript } from '@/lib/ai';
 import { getTranscriptWithCache } from '@/lib/youtube';
 import { createSummary } from '@/lib/db/models/summary';
 import { extractVideoId } from '@/lib/db/models/transcript';

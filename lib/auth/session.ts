@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
-import { JWTPayload, SignJWT, jwtVerify } from 'jose';
+import { SignJWT, jwtVerify } from 'jose';
+import { SessionPayload } from './types';
 
 const SESSION_NAME = 'notion_session';
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -12,10 +13,6 @@ function getSecretKey() {
     return new TextEncoder().encode(secret);
 }
 
-export interface SessionPayload extends JWTPayload {
-    userId: string;
-    notionUserId: string;
-}
 
 export async function createSession(payload: SessionPayload): Promise<string> {
     const token = await new SignJWT(payload)

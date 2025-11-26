@@ -1,5 +1,5 @@
 import { Label } from "@/components/ui/label";
-import { SUMMARY_TYPES } from "@/lib/ai/prompts";
+import { SUMMARY_TYPES } from "@/lib/ai";
 import { cn } from "@/lib/utils";
 
 interface SummaryTypeSelectorProps {

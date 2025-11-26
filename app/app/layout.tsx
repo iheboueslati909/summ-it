@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
-import { getSession } from '@/lib/auth/session';
-import { findUserById } from '@/lib/db/models/user';
+import { getSession } from '@/lib/auth';
+import { findUserById } from '@/lib/db';
 import { TopBar } from '../../components/TopBar';
 
 export default async function AppLayout({

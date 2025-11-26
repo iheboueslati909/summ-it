@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth/session';
+import { getSession } from '@/lib/auth';
 import { updateSummary, deleteSummary } from '@/lib/db/models/summary';
 
 export async function PATCH(
