@@ -65,7 +65,7 @@ export function NotionSourceSelector({ value, onChange }: NotionSourceSelectorPr
         return (
             <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium text-muted-foreground">Save to Notion</Label>
-                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-15 w-full" />
             </div>
         );
     }
