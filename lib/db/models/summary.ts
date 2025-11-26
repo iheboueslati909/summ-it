@@ -12,6 +12,7 @@ export interface Summary {
     language?: string;
     createdAt: Date;
     updatedAt: Date;
+    availableLanguages: string[];
 }
 
 export async function createSummary(data: Omit<Summary, '_id' | 'createdAt' | 'updatedAt'>) {

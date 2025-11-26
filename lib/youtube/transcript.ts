@@ -1,5 +1,6 @@
 import { extractVideoId, findCachedTranscript } from '@/lib/db/models/transcript';
 import { getYoutubeTranscript } from './supadata';
+import { TranscriptResult } from '@/types';
 
 /**
  * Get transcript for a YouTube video, checking cache first
@@ -10,8 +11,7 @@ import { getYoutubeTranscript } from './supadata';
 export async function getTranscriptWithCache(
     youtubeUrl: string,
     language?: string
-): Promise<string> {
-    let transcriptText = '';
+): Promise<TranscriptResult | null> {
 
     const videoId = extractVideoId(youtubeUrl);
 
@@ -25,12 +25,16 @@ export async function getTranscriptWithCache(
 
                 // Only return cached if the content format matches (text vs chunks)
                 // And if a specific language was requested, it matches the cached one
-                const langMatch = !language || cached.transcript.lang === language;
+                const langMatch = language === 'auto' ? true : (!language || cached.transcript.lang === language);
                 const formatMatch = cachedIsText === requestIsText;
 
                 if (langMatch && formatMatch) {
                     console.log(`[Cache Hit] Serving transcript for video ${videoId}`);
-                    transcriptText = cached.transcript.content.toString();
+                    return {
+                        content: cached.transcript.content,
+                        lang: cached.transcript.lang,
+                        availableLangs: cached.transcript.availableLangs
+                    }
                 }
             }
         } catch (error) {
@@ -40,17 +44,19 @@ export async function getTranscriptWithCache(
     }
 
     // 2. Fetch from API if not cached
-    if (transcriptText.length === 0) {
-        try {
-            const transcript = await getYoutubeTranscript(
-                youtubeUrl,
-                language === 'auto' ? undefined : language
-            );
-            transcriptText = transcript.content.toString();
-        } catch (err) {
-            throw new Error('No transcript available for this video');
+    let transcriptResult = null;
+    try {
+        const transcript = await getYoutubeTranscript(
+            youtubeUrl,
+            language === 'auto' ? undefined : language
+        );
+        return {
+            content: transcript.content,
+            lang: transcript.lang,
+            availableLangs: transcript.availableLangs
         }
+    } catch (err) {
+        throw new Error('No transcript available for this video');
     }
 
-    return transcriptText;
 }

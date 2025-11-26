@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
-import { NotionClient, splitTextIntoBlocks, buildNotionBlocks } from '@/lib/notion/client';
+import { NotionClient, saveSummaryToNotion } from '@/lib/notion';
 import { SummarizeRequest } from '@/types';
 import { summarizeTranscript } from '@/lib/ai/summarizer';
 import { getTranscriptWithCache } from '@/lib/youtube';
 import { createSummary } from '@/lib/db/models/summary';
 import { extractVideoId } from '@/lib/db/models/transcript';
+import { TranscriptResult } from '@/types';
 
 function err(code: string, message: string, hint?: string, status = 400) {
     return NextResponse.json({ code, message, hint }, { status });
@@ -35,11 +36,10 @@ export async function POST(req: Request) {
         }
 
         const notion = new NotionClient(session.userId);
-
+        let transcriptResult: TranscriptResult | null = null
         // ---- 1. Transcript retrieval ----
-        let transcriptText = "";
         try {
-            transcriptText = await getTranscriptWithCache(youtubeUrl, language);
+            transcriptResult = await getTranscriptWithCache(youtubeUrl, language);
         } catch {
             return err(
                 "NO_TRANSCRIPT",
@@ -50,8 +50,8 @@ export async function POST(req: Request) {
 
         // ---- 2. LLM summary ----
         const resultSummary = await summarizeTranscript({
-            transcript: transcriptText,
-            language,
+            transcript: transcriptResult?.content?.toString() || "",
+            language: transcriptResult?.lang || language,
             summaryType: summaryType as any,
         });
 
@@ -75,53 +75,22 @@ export async function POST(req: Request) {
                 title: resultSummary.title,
                 content: resultSummary.summary,
                 summaryType,
-                language,
+                language: transcriptResult?.lang || language,
+                availableLanguages: transcriptResult?.availableLangs || [],
             });
         } catch (dbErr) {
             console.error("Failed to save summary:", dbErr);
         }
 
         // ---- 4. Notion output ----
-        let notionUrl = "";
-
-        const textBlocks = splitTextIntoBlocks(resultSummary.summary);
-        const notionBlocks = buildNotionBlocks(textBlocks);
-
-        if (targetSourceType === "database") {
-            const created = await notion.createPageInDatabase(
-                targetSourceId,
-                {
-                    Title: {
-                        title: [
-                            {
-                                type: "text",
-                                text: { content: `Summary: ${youtubeUrl}` },
-                            },
-                        ],
-                    },
-                },
-                notionBlocks
-            );
-            notionUrl = created.url;
-        }
-
-        if (targetSourceType === "page") {
-            const blocks = [
-                {
-                    object: "block" as const,
-                    type: "heading_2" as const,
-                    heading_2: {
-                        rich_text: [
-                            { type: "text", text: { content: resultSummary.title } },
-                        ],
-                    },
-                },
-                ...notionBlocks,
-            ];
-
-            await notion.appendBlocks(targetSourceId, blocks);
-            notionUrl = `https://www.notion.so/${targetSourceId.replace(/-/g, "")}`;
-        }
+        const { notionUrl } = await saveSummaryToNotion({
+            notion,
+            targetSourceId,
+            targetSourceType,
+            youtubeUrl,
+            title: resultSummary.title,
+            summary: resultSummary.summary,
+        });
 
         return NextResponse.json({ notionUrl });
 
