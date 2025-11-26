@@ -13,31 +13,8 @@ export async function getYoutubeTranscript(
     lang?: string,
     text = true
 ): Promise<TranscriptResult> {
+
     const videoId = extractVideoId(videoUrl);
-
-    // 1. Check cache
-    if (videoId) {
-        try {
-            const cached = await findCachedTranscript(videoId);
-            if (cached) {
-                const cachedIsText = typeof cached.transcript.content === 'string';
-                const requestIsText = text;
-
-                // Only return cached if the content format matches (text vs chunks)
-                // And if a specific language was requested, it matches the cached one
-                const langMatch = !lang || cached.transcript.lang === lang;
-                const formatMatch = cachedIsText === requestIsText;
-
-                if (langMatch && formatMatch) {
-                    console.log(`[Cache Hit] Serving transcript for video ${videoId}`);
-                    return cached.transcript;
-                }
-            }
-        } catch (error) {
-            console.error('Error checking transcript cache:', error);
-            // Continue to fetch if cache check fails
-        }
-    }
 
     try {
         console.log(`[Supadata] Fetching transcript for ${videoUrl}`);

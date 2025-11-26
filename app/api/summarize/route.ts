@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
-import { YoutubeTranscript } from 'youtube-transcript';
 import { getSession } from '@/lib/auth/session';
 import { NotionClient, splitTextIntoBlocks, buildNotionBlocks } from '@/lib/notion/client';
 import { SummarizeRequest } from '@/types';
 import { summarizeTranscript } from '@/lib/ai/summarizer';
-import { getYoutubeTranscript } from '@/lib/youtube/supadata';
+import { getTranscriptWithCache } from '@/lib/youtube';
 import { createSummary } from '@/lib/db/models/summary';
 import { extractVideoId } from '@/lib/db/models/transcript';
-
 
 export async function POST(req: Request) {
     try {
@@ -27,12 +25,9 @@ export async function POST(req: Request) {
 
         // ---- 1. Get transcript ----
         let transcriptText = '';
+
         try {
-            const transcript = await getYoutubeTranscript(youtubeUrl,
-                language === 'auto' ? undefined : language
-            );
-            transcriptText = transcript.content.toString();
-            // transcriptText = transcript.map(t => t.text).join(' ');
+            transcriptText = await getTranscriptWithCache(youtubeUrl, language);
         } catch (err) {
             return NextResponse.json({
                 error: 'No transcript available for this video',
