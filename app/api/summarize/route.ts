@@ -97,7 +97,7 @@ export async function POST(req: Request) {
                         ]
                     }
                 },
-                notionBlocks
+                ...notionBlocks
             ];
 
             await notion.appendBlocks(targetSourceId, blocks);
