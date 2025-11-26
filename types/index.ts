@@ -9,9 +9,16 @@ export interface NotionSource {
 export interface SummarizeRequest {
     youtubeUrl: string;
     language: string;
-    targetSourceId: string;
-    targetSourceType: 'page' | 'database';
+    outputType: 'notion' | 'pdf';
+    targetSourceId?: string;
+    targetSourceType?: 'page' | 'database';
     summaryType?: string;
+}
+
+export interface PDFSummaryResponse {
+    pdfData: string; // base64 encoded PDF
+    title: string;
+    videoUrl: string;
 }
 
 export const SUPPORTED_LANGUAGES = [

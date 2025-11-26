@@ -16,16 +16,13 @@ export function YouTubeInput({ value, onChange, error }: YouTubeInputProps) {
 
     return (
         <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium text-muted-foreground">
-                YouTube Video URL
-            </Label>
             <Input
                 type="url"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder="https://youtube.com/watch?v=..."
                 className={cn(
-                    "text-base rounded-xl p-3 transition-colors border",
+                    "text-base  p-3 transition-colors border",
                     invalid && "border-destructive focus-visible:ring-destructive"
                 )}
             />

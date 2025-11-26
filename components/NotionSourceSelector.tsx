@@ -14,13 +14,15 @@ import {
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Sticker } from "lucide-react";
 
 interface NotionSourceSelectorProps {
     value: NotionSource | null;
     onChange: (source: NotionSource | null) => void;
+    disabled?: boolean;
 }
 
-export function NotionSourceSelector({ value, onChange }: NotionSourceSelectorProps) {
+export function NotionSourceSelector({ value, onChange, disabled }: NotionSourceSelectorProps) {
     const [sources, setSources] = useState<NotionSource[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -64,7 +66,10 @@ export function NotionSourceSelector({ value, onChange }: NotionSourceSelectorPr
     if (loading) {
         return (
             <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium text-muted-foreground">Save to Notion</Label>
+                <Label className="text-sm font-medium flex items-center gap-2">
+                    <Sticker className="w-4 h-4 text-muted-foreground" />
+                    Save to Notion
+                </Label>
                 <Skeleton className="h-15 w-full" />
             </div>
         );
@@ -74,7 +79,10 @@ export function NotionSourceSelector({ value, onChange }: NotionSourceSelectorPr
     if (error) {
         return (
             <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium text-muted-foreground">Save to Notion</Label>
+                <Label className="text-sm font-medium flex items-center gap-2">
+                    <Sticker className="w-4 h-4 text-muted-foreground" />
+                    Save to Notion
+                </Label>
                 <div className="flex items-center justify-between p-2.5 text-sm text-destructive bg-destructive/10 rounded-md">
                     <span>{error}</span>
                     <Button
@@ -94,7 +102,7 @@ export function NotionSourceSelector({ value, onChange }: NotionSourceSelectorPr
     if (sources.length === 0) {
         return (
             <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium text-muted-foreground">Save to Notion</Label>
+                <Label className="text-sm font-medium">Save to Notion</Label>
                 <div className="p-4 bg-muted/50 rounded-md text-center">
                     <p className="text-sm text-muted-foreground mb-2">
                         No pages shared with this integration.
@@ -118,8 +126,11 @@ export function NotionSourceSelector({ value, onChange }: NotionSourceSelectorPr
     // Normal state with sources
     return (
         <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium text-muted-foreground">Save to Notion</Label>
-            <Select value={value?.id || ''} onValueChange={handleValueChange}>
+            <Label className="text-sm font-medium flex items-center gap-2">
+                <Sticker className="w-4 h-4 text-muted-foreground" />
+                Save to Notion
+            </Label>
+            <Select disabled={disabled} value={value?.id || ''} onValueChange={handleValueChange}>
                 <SelectTrigger>
                     <SelectValue placeholder="Select a page or database" />
                 </SelectTrigger>

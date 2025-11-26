@@ -12,10 +12,6 @@ export function SummaryTypeSelector({ value, onChange }: SummaryTypeSelectorProp
 
     return (
         <div className="flex flex-col gap-3">
-            <Label className="text-sm font-medium text-muted-foreground">
-                Summary Type
-            </Label>
-
             {/* BUTTON GROUP */}
             <div className="flex flex-wrap gap-2">
                 {SUMMARY_TYPES.map((type) => {

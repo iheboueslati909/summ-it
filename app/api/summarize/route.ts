@@ -25,18 +25,27 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json() as SummarizeRequest;
-        const { youtubeUrl, language, targetSourceId, targetSourceType, summaryType } = body;
+        const { youtubeUrl, language, targetSourceId, targetSourceType, summaryType, outputType } = body;
 
-        if (!youtubeUrl || !targetSourceId || !targetSourceType) {
+        if (!youtubeUrl || !outputType) {
             return err(
                 "MISSING_FIELDS",
                 "Required fields are missing.",
-                "Ensure YouTube URL and Notion destination are provided."
+                "Ensure YouTube URL and output type are provided."
             );
         }
 
-        const notion = new NotionClient(session.userId);
-        let transcriptResult: TranscriptResult | null = null
+        // Validate Notion-specific fields if outputType is 'notion'
+        if (outputType === 'notion' && (!targetSourceId || !targetSourceType)) {
+            return err(
+                "MISSING_NOTION_FIELDS",
+                "Notion destination is required when saving to Notion.",
+                "Please select a Notion page or database."
+            );
+        }
+
+        let transcriptResult: TranscriptResult | null = null;
+
         // ---- 1. Transcript retrieval ----
         try {
             transcriptResult = await getTranscriptWithCache(youtubeUrl, language);
@@ -64,35 +73,58 @@ export async function POST(req: Request) {
             );
         }
 
-        // ---- 3. History save (non-fatal) ----
-        try {
-            const videoId = extractVideoId(youtubeUrl) || undefined;
+        // ---- 3. Handle output based on type ----
+        if (outputType === 'pdf') {
+            // For PDF: generate and return PDF data (no history save)
+            const { generateSummaryPDF } = await import('@/lib/utils/pdf-generator');
 
-            await createSummary({
-                userId: session.userId,
-                videoUrl: youtubeUrl,
-                videoId,
+            const pdfData = generateSummaryPDF({
                 title: resultSummary.title,
-                content: resultSummary.summary,
+                videoUrl: youtubeUrl,
+                summary: resultSummary.summary,
                 summaryType,
                 language: transcriptResult?.lang || language,
-                availableLanguages: transcriptResult?.availableLangs || [],
             });
-        } catch (dbErr) {
-            console.error("Failed to save summary:", dbErr);
+
+            return NextResponse.json({
+                pdfData,
+                title: resultSummary.title,
+                videoUrl: youtubeUrl,
+            });
+        } else {
+            // For Notion: save to history and Notion
+            const notion = new NotionClient(session.userId);
+
+            // ---- 3a. History save (non-fatal) ----
+            try {
+                const videoId = extractVideoId(youtubeUrl) || undefined;
+
+                await createSummary({
+                    userId: session.userId,
+                    videoUrl: youtubeUrl,
+                    videoId,
+                    title: resultSummary.title,
+                    content: resultSummary.summary,
+                    summaryType,
+                    language: transcriptResult?.lang || language,
+                    availableLanguages: transcriptResult?.availableLangs || [],
+                });
+            } catch (dbErr) {
+                console.error("Failed to save summary:", dbErr);
+            }
+
+            // ---- 3b. Notion output ----
+            const { notionUrl } = await saveSummaryToNotion({
+                notion,
+                targetSourceId: targetSourceId!,
+                targetSourceType: targetSourceType!,
+                youtubeUrl,
+                title: resultSummary.title,
+                summary: resultSummary.summary,
+            });
+
+            return NextResponse.json({ notionUrl });
         }
-
-        // ---- 4. Notion output ----
-        const { notionUrl } = await saveSummaryToNotion({
-            notion,
-            targetSourceId,
-            targetSourceType,
-            youtubeUrl,
-            title: resultSummary.title,
-            summary: resultSummary.summary,
-        });
-
-        return NextResponse.json({ notionUrl });
 
     } catch (err: any) {
         console.error("SUMMARIZE API ERROR:", err);
