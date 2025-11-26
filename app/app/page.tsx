@@ -12,8 +12,11 @@ import { NotionSource } from "@/types";
 import { HistorySidebar } from "@/components/history-sidebar";
 import { Summary } from "@/lib/db/models/summary";
 import { HistoryCard } from "@/components/history-card";
+import { useApi } from "@/hooks/useApi";
 
 export default function AppPage() {
+    const { request } = useApi();
+
     // Summarizer State
     const [youtubeUrl, setYoutubeUrl] = useState("");
     const [language, setLanguage] = useState("auto");
@@ -32,10 +35,10 @@ export default function AppPage() {
 
     async function handleSummarize() {
         if (!canSubmit) return;
-        setIsSubmitting(true);
 
+        setIsSubmitting(true);
         try {
-            const res = await fetch("/api/summarize", {
+            const data = await request("/api/summarize", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -47,14 +50,12 @@ export default function AppPage() {
                 }),
             });
 
-            if (!res.ok) throw new Error("Failed to summarize");
-
-            const data = await res.json();
             alert(`Summary saved! ${data.notionUrl || ""}`);
             setYoutubeUrl("");
-            setRefreshTrigger(prev => prev + 1); // Refresh history list
+            setRefreshTrigger(prev => prev + 1);
         } catch (err) {
-            alert("Something went wrong. Please try again.");
+            // Toast already shown by useApi hook
+            console.error(err);
         } finally {
             setIsSubmitting(false);
         }
@@ -66,8 +67,6 @@ export default function AppPage() {
 
     const handleHistoryUpdate = () => {
         setRefreshTrigger(prev => prev + 1);
-        // If the selected summary was deleted, clear selection
-        // Note: Ideally we'd check if it still exists, but for now this refresh will handle the list
     };
 
     return (
@@ -96,20 +95,16 @@ export default function AppPage() {
                                     Extract subtitles, generate a summary, and save it directly to Notion.
                                 </CardDescription>
                             </CardHeader>
-
                             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="flex flex-col gap-6">
                                     <YouTubeInput value={youtubeUrl} onChange={setYoutubeUrl} />
                                     <SummaryTypeSelector value={summaryType} onChange={setSummaryType} />
-
                                 </div>
 
                                 <div className="flex flex-col gap-6">
                                     <LanguageSelector value={language} onChange={setLanguage} />
                                     <NotionSourceSelector value={targetSource} onChange={setTargetSource} />
-
                                     <Separator />
-
                                     <div className="flex flex-col gap-3">
                                         <Button
                                             onClick={handleSummarize}
@@ -118,7 +113,6 @@ export default function AppPage() {
                                         >
                                             {isSubmitting ? "Processing..." : "✨ Summarize"}
                                         </Button>
-
                                         <Button
                                             variant="outline"
                                             onClick={openNotionSettings}
