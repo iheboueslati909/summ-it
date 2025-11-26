@@ -13,6 +13,7 @@ import { HistorySidebar } from "@/components/history-sidebar";
 import { Summary } from "@/lib/db/models/summary";
 import { HistoryCard } from "@/components/history-card";
 import { useApi } from "@/hooks/useApi";
+import { toast } from "sonner";
 
 export default function AppPage() {
     const { request } = useApi();
@@ -50,7 +51,13 @@ export default function AppPage() {
                 }),
             });
 
-            alert(`Summary saved! ${data.notionUrl || ""}`);
+            toast.success("Summary saved!", {
+                description: data.notionUrl ? "Click to open in Notion" : undefined,
+                action: data.notionUrl ? {
+                    label: "Open",
+                    onClick: () => window.open(data.notionUrl, "_blank"),
+                } : undefined,
+            });
             setYoutubeUrl("");
             setRefreshTrigger(prev => prev + 1);
         } catch (err) {
