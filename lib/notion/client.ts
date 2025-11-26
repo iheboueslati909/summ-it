@@ -118,7 +118,6 @@ interface NotionSearchResult {
     title?: Array<{ plain_text: string }>;
 }
 
-// Helper to extract title from Notion's nested structure
 export function extractTitle(result: NotionSearchResult): string {
     if (result.object === 'database') {
         return result.title?.map(t => t.plain_text).join('') || 'Untitled Database';
@@ -137,7 +136,6 @@ export function extractTitle(result: NotionSearchResult): string {
     return 'Untitled';
 }
 
-// Helper to extract icon
 export function extractIcon(result: NotionSearchResult): string | undefined {
     if (!result.icon) return undefined;
 
@@ -167,4 +165,19 @@ export function splitTextIntoBlocks(text: string, maxLength: number = 2000): str
     }
 
     return blocks;
+}
+
+export function buildNotionBlocks(textBlocks: string[]) {
+    return textBlocks.map((blockText, index) => ({
+        object: 'block' as const,
+        type: 'paragraph' as const,
+        paragraph: {
+            rich_text: [
+                {
+                    type: 'text' as const,
+                    text: { content: blockText }
+                }
+            ]
+        }
+    }));
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { YoutubeTranscript } from 'youtube-transcript';
 import { getSession } from '@/lib/auth/session';
-import { NotionClient, splitTextIntoBlocks } from '@/lib/notion/client';
+import { NotionClient, splitTextIntoBlocks, buildNotionBlocks } from '@/lib/notion/client';
 import { SummarizeRequest } from '@/types';
 import { summarizeTranscript } from '@/lib/ai/summarizer';
 import { getYoutubeTranscript } from '@/lib/youtube/supadata';
@@ -69,20 +69,8 @@ export async function POST(req: Request) {
         let notionUrl = '';
 
         if (targetSourceType === 'database') {
-            //TODO getTextBlocks and getBlocks to notion library
             const textBlocks = splitTextIntoBlocks(resultSummary.summary);
-            const blocks = textBlocks.map((blockText, index) => ({
-                object: 'block' as const,
-                type: 'paragraph' as const,
-                paragraph: {
-                    rich_text: [
-                        {
-                            type: 'text' as const,
-                            text: { content: blockText }
-                        }
-                    ]
-                }
-            }));
+            const notionBlocks = buildNotionBlocks(textBlocks);
 
             const created = await notion.createPageInDatabase(
                 targetSourceId,
@@ -96,12 +84,14 @@ export async function POST(req: Request) {
                         ]
                     }
                 },
-                blocks
+                notionBlocks
             );
             notionUrl = created.url;
 
         } else if (targetSourceType === 'page') {
             const textBlocks = splitTextIntoBlocks(resultSummary.summary);
+            const notionBlocks = buildNotionBlocks(textBlocks);
+
             const blocks = [
                 {
                     object: 'block' as const,
@@ -112,15 +102,7 @@ export async function POST(req: Request) {
                         ]
                     }
                 },
-                ...textBlocks.map(blockText => ({
-                    object: 'block' as const,
-                    type: 'paragraph' as const,
-                    paragraph: {
-                        rich_text: [
-                            { type: 'text', text: { content: blockText } }
-                        ]
-                    }
-                }))
+                notionBlocks
             ];
 
             await notion.appendBlocks(targetSourceId, blocks);
