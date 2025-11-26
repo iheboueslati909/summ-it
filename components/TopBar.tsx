@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { History } from 'lucide-react';
+import Image from "next/image";
 
 interface TopBarProps {
     workspaceName?: string;
@@ -23,10 +23,15 @@ export function TopBar({ workspaceName }: TopBarProps) {
     return (
         <header className="flex justify-between items-center px-6 py-3 bg-background border-b">
             <Link href="/app" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                <span className="text-xl">📺</span>
-                <span className="font-semibold text-sm text-foreground">
-                    YouTube → Notion
-                </span>
+                <div className="h-8 flex items-center">
+                    <Image
+                        src="/logo.png"
+                        alt="logo"
+                        width={384}
+                        height={192}
+                        className="h-full w-auto"
+                    />
+                </div>
             </Link>
 
             <div className="flex items-center gap-4">
