@@ -67,7 +67,6 @@ export function NotionSourceSelector({ value, onChange, disabled }: NotionSource
         return (
             <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-2">
-                    <Sticker className="w-4 h-4 text-muted-foreground" />
                     Save to Notion
                 </Label>
                 <Skeleton className="h-15 w-full" />
@@ -80,7 +79,6 @@ export function NotionSourceSelector({ value, onChange, disabled }: NotionSource
         return (
             <div className="flex flex-col gap-2">
                 <Label className="text-sm font-medium flex items-center gap-2">
-                    <Sticker className="w-4 h-4 text-muted-foreground" />
                     Save to Notion
                 </Label>
                 <div className="flex items-center justify-between p-2.5 text-sm text-destructive bg-destructive/10 rounded-md">
@@ -126,12 +124,11 @@ export function NotionSourceSelector({ value, onChange, disabled }: NotionSource
     // Normal state with sources
     return (
         <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium flex items-center gap-2">
-                <Sticker className="w-4 h-4 text-muted-foreground" />
+            <Label className="text-sm font-medium flex items-center gap-2 text-muted-foreground ml-1">
                 Save to Notion
             </Label>
             <Select disabled={disabled} value={value?.id || ''} onValueChange={handleValueChange}>
-                <SelectTrigger>
+                <SelectTrigger className=" bg-white">
                     <SelectValue placeholder="Select a page or database" />
                 </SelectTrigger>
                 <SelectContent>

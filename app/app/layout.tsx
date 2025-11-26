@@ -20,5 +20,6 @@ export default async function AppLayout({
             <TopBar workspaceName={user.notion.workspaceName} />
             {children}
         </div>
+
     );
 }

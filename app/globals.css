@@ -65,6 +65,18 @@
     --radius-md: calc(var(--radius) - 2px);
     --radius-lg: var(--radius);
     --radius-xl: calc(var(--radius) + 4px);
+
+    --animate-aurora: aurora 60s linear infinite;
+
+    @keyframes aurora {
+        from {
+            backgroundPosition: 50% 50%, 50% 50%;
+        }
+
+        to {
+            backgroundPosition: 350% 50%, 350% 50%;
+        }
+    }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -253,14 +265,27 @@ a {
     --shadow-lg: var(--shadow-lg);
     --shadow-xl: var(--shadow-xl);
     --shadow-2xl: var(--shadow-2xl);
+
+    --animate-aurora: aurora 60s linear infinite;
+
+    @keyframes aurora {
+        from {
+            background-position: 50% 50%, 50% 50%;
+        }
+
+        to {
+            background-position: 350% 50%, 350% 50%;
+        }
+    }
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+    * {
+        @apply border-border outline-ring/50;
     }
-  body {
-    @apply bg-background text-foreground;
-    letter-spacing: var(--tracking-normal);
+
+    body {
+        @apply bg-background text-foreground;
+        letter-spacing: var(--tracking-normal);
     }
 }
