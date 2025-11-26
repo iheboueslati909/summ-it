@@ -1,45 +1,16 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { retry } from "./retry-helper";
 import { CHUNK_SUMMARY_PROMPT, GET_SYNTHESIS_PROMPT, SummaryType } from "./prompts";
+import { acquireToken } from "../rate-limiter";
+import { chunkTextSmart, extractTitle, verifyTranscript } from "./helpers";
 
 const USE_MOCK_LLM = process.env.USE_MOCK_LLM === "true";
-const MAX_CHARS_PER_CHUNK = 6000;
-const MAX_TRANSCRIPT_CHARS = 200000;
-const CHUNK_OVERLAP = 400;
 
 let model: ReturnType<GoogleGenerativeAI["getGenerativeModel"]> | null = null;
 
 if (!USE_MOCK_LLM) {
-    if (!process.env.GEMINI_API_KEY) {
-        throw new Error("GEMINI_API_KEY is not defined");
-    }
+    if (!process.env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not defined");
     const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     model = client.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
-}
-
-function chunkTextSmart(text: string, maxSize = MAX_CHARS_PER_CHUNK): string[] {
-    const chunks: string[] = [];
-    let current = "";
-
-    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
-
-    for (const sentence of sentences) {
-        const trimmed = sentence.trim();
-        if (!trimmed) continue;
-
-        if ((current + trimmed).length > maxSize && current.length > 0) {
-            chunks.push(current.trim());
-            current = sentences.slice(-3).join("").trim();
-        }
-
-        current += " " + trimmed;
-    }
-
-    if (current.trim().length > 0) {
-        chunks.push(current.trim());
-    }
-
-    return chunks.filter(c => c.length > 50);
 }
 
 export async function summarizeChunk(
@@ -47,54 +18,29 @@ export async function summarizeChunk(
     language: string,
     chunkNum = 1,
     totalChunks = 1
-): Promise<string> {
+): Promise<string | null> {
 
-    if (USE_MOCK_LLM) {
-        return `MOCK SUMMARY (chunk ${chunkNum})`;
-    }
+    if (USE_MOCK_LLM) return `MOCK SUMMARY (chunk ${chunkNum})`;
+
+    if (!model) throw new Error("LLM model not initialized");
 
     const prompt = CHUNK_SUMMARY_PROMPT(text, language, chunkNum, totalChunks);
 
     try {
-        const summary = await retry(async () => {
-            const result = await model!.generateContent({
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
-                generationConfig: {
-                    temperature: 0.3,
-                    topP: 0.9
-                },
-            });
-
-            const output = result.response.text().trim();
-
-            if (!output) {
-                throw new Error(`Empty LLM response on chunk ${chunkNum}`);
-            }
-
-            return output;
-        }, {
-            retries: 3,
-            baseDelayMs: 600,
-            onRetry: (err, attempt) => {
-                console.warn(
-                    `⚠️ Chunk ${chunkNum} retry ${attempt}/3 — Reason: ${err?.message}`
-                );
-            }
+        await acquireToken();
+        const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.3, topP: 0.9 }
         });
 
-        return summary;
+        const output = result?.response?.text?.()?.trim();
+        if (!output) throw new Error("Empty response");
+
+        return output;
 
     } catch (err) {
-        console.error(`❌ Chunk ${chunkNum} failed after retries`, err);
-
-        // isolate the damage: produce a stable fallback
-        return [
-            `⚠️ **FALLBACK SUMMARY FOR CHUNK ${chunkNum}**`,
-            `The AI model failed to summarize this section after multiple attempts.`,
-            ``,
-            `🧩 Chunk preview (truncated):`,
-            text.substring(0, 400) + "...",
-        ].join("\n");
+        console.error(`❌ Chunk ${chunkNum} failed:`, err);
+        return null;
     }
 }
 
@@ -106,57 +52,51 @@ export async function summarizeTranscript({
     transcript: string;
     language: string;
     summaryType?: SummaryType;
-}): Promise<string> {
+}): Promise<{ summary: string, title: string } | null> {
 
-    if (!transcript) throw new Error("Transcript is required");
-    if (transcript.length < 50) throw new Error("Transcript too short");
-    if (transcript.length > MAX_TRANSCRIPT_CHARS)
-        throw new Error(`Transcript too large (${transcript.length} chars)`);
+    verifyTranscript(transcript);
 
-    // 1) Chunking
+    // --- 1) Chunking ---
     const chunks = chunkTextSmart(transcript);
-    console.log(`Generated ${chunks.length} chunks`);
-
     if (chunks.length === 0) throw new Error("No valid chunks created");
 
-    // 2) Chunk summarization
-    const partialSummaries = await Promise.all(
-        chunks.map((chunk, idx) => summarizeChunk(chunk, language, idx + 1, chunks.length))
-    );
+    // --- 2) Summarize each chunk ---
+    const partialSummaries: string[] = [];
 
-    // 3) If tiny transcript → skip synthesis
-    if (chunks.length <= 2) {
-        console.log("Small transcript → returning merged partial summaries");
-        return partialSummaries.join("\n\n");
+    try {
+        for (let idx = 0; idx < chunks.length; idx++) {
+            const summary = await summarizeChunk(chunks[idx], language, idx + 1, chunks.length);
+            partialSummaries.push(summary ?? `Missing summary for chunk ${idx + 1}`);
+        }
+    } catch {
+        throw new Error("Failed to summarize transcript chunks");
     }
 
-    // 4) Synthesis stage (with failover)
+    // --- 3) Synthesis step ---
     try {
-        const synthesis = await model!.generateContent({
+        if (!model) throw new Error("LLM model not initialized");
+
+        await acquireToken();
+
+        const synthesis = await model.generateContent({
             contents: [
                 {
                     role: "user",
                     parts: [{ text: GET_SYNTHESIS_PROMPT(partialSummaries, language, summaryType) }],
                 },
             ],
-            generationConfig: {
-                temperature: 0.4,
-                topP: 0.95,
-            },
+            generationConfig: { temperature: 0.4, topP: 0.95 }
         });
 
-        const final = synthesis.response.text().trim();
+        const final = synthesis?.response?.text?.()?.trim();
         if (!final) throw new Error("Empty synthesis output");
 
-        return final;
+        let title = extractTitle(final);
+
+        return { summary: final, title };
+
     } catch (err) {
         console.error("❌ Synthesis failed", err);
-
-        // Last-resort fallback
-        return [
-            "⚠️ **FINAL SYNTHESIS FAILED — Using raw chunk summaries instead**",
-            "",
-            ...partialSummaries
-        ].join("\n\n");
+        return null;
     }
 }

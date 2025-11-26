@@ -3,12 +3,11 @@ import { YoutubeTranscript } from 'youtube-transcript';
 import { getSession } from '@/lib/auth/session';
 import { NotionClient, splitTextIntoBlocks } from '@/lib/notion/client';
 import { SummarizeRequest } from '@/types';
-import { summarizeChunk, summarizeTranscript } from '@/lib/ai/summarizer';
+import { summarizeTranscript } from '@/lib/ai/summarizer';
 import { getYoutubeTranscript } from '@/lib/youtube/supadata';
 import { createSummary } from '@/lib/db/models/summary';
 import { extractVideoId } from '@/lib/db/models/transcript';
 
-// const llm = new GeminiLLM();
 
 export async function POST(req: Request) {
     try {
@@ -40,40 +39,38 @@ export async function POST(req: Request) {
             }, { status: 400 });
         }
 
-        console.log("***************** Fetched transcript is ", transcriptText);
         // ---- 2. Summarize with LLM ----
-        const summary = await summarizeTranscript({
+        const resultSummary = await summarizeTranscript({
             transcript: transcriptText,
             language,
             summaryType: summaryType as any
         });
 
+        if (!resultSummary) return NextResponse.json({ error: 'Summary failed' }, { status: 500 });
+
         // ---- 3. Save to History ----
-        let title = '';
         try {
-            // Simple title extraction: first sentence or first 100 chars
-            title = summary.split(/[.!?]/, 1)[0].substring(0, 150) || "Untitled Summary";
             const videoId = extractVideoId(youtubeUrl) || undefined;
 
             await createSummary({
                 userId: session.userId,
                 videoUrl: youtubeUrl,
                 videoId,
-                title,
-                content: summary,
+                title: resultSummary.title,
+                content: resultSummary.summary,
                 summaryType,
                 language
             });
         } catch (dbErr) {
             console.error('Failed to save summary to history:', dbErr);
-            // Don't fail the request if saving history fails, just log it
         }
 
         // ---- 4. Create or append in Notion ----
         let notionUrl = '';
 
         if (targetSourceType === 'database') {
-            const textBlocks = splitTextIntoBlocks(summary);
+            //TODO getTextBlocks and getBlocks to notion library
+            const textBlocks = splitTextIntoBlocks(resultSummary.summary);
             const blocks = textBlocks.map((blockText, index) => ({
                 object: 'block' as const,
                 type: 'paragraph' as const,
@@ -104,14 +101,14 @@ export async function POST(req: Request) {
             notionUrl = created.url;
 
         } else if (targetSourceType === 'page') {
-            const textBlocks = splitTextIntoBlocks(summary);
+            const textBlocks = splitTextIntoBlocks(resultSummary.summary);
             const blocks = [
                 {
                     object: 'block' as const,
                     type: 'heading_2' as const,
                     heading_2: {
                         rich_text: [
-                            { type: 'text', text: { content: title } }
+                            { type: 'text', text: { content: resultSummary.title } }
                         ]
                     }
                 },
