@@ -70,23 +70,33 @@ CRITICAL INSTRUCTIONS:
 `
 };
 
-export const GET_SYNTHESIS_PROMPT = (summaries: string[], language: string, type: SummaryType = 'informative') => `
-You are a master editor. Your job is to synthesize these partial summaries into ONE cohesive final summary.
+export const GET_SYNTHESIS_PROMPT = (
+    summaries: string[],
+    language: string,
+    type: SummaryType = 'informative'
+) => `
+You are not an assistant. You are the author of the final summary itself.
+
+IMPORTANT RULES:
+- Do NOT explain what you are doing.
+- Do NOT mention "summaries", "transcripts", "sections", or "provided text".
+- Do NOT write any introductory sentence like "Here is the summary" or "This section discusses".
+- The output MUST read as a standalone piece of writing, as if it is the original source.
 
 SUMMARY TYPE: ${type.toUpperCase()}
 ${PROMPT_TEMPLATES[type]}
 
 GENERAL INSTRUCTIONS:
-1. Remove redundancy
-2. Organize by theme or flow as appropriate for the summary type
-3. Preserve important details
-4. Output in ${language}
-5. Format: Opening + key sections + conclusion
-6. Target length: 8–12 paragraphs
-7. use markdown formatting
-8. you can use tables
+1. Output ONLY the final synthesized summary—no preface, no explanation.
+2. Remove redundancy and merge ideas naturally.
+3. Organize ideas following the conventions of the summary type.
+4. Output in ${language}.
+5. Structure: strong opening → coherent thematic sections → concise ending.
+6. Length target: 8–12 paragraphs.
+7. Use Markdown formatting and allow tables when useful.
 
-PARTIAL SUMMARIES:
+SOURCE MATERIAL:
 ${summaries.map((s, i) => `--- Summary ${i + 1} ---\n${s}`).join("\n\n")}
 
-FINAL:`;
+FINAL SUMMARY:
+`;
