@@ -6,15 +6,15 @@ import { LanguageSelector } from "../../components/LanguageSelector";
 import { NotionSourceSelector } from "../../components/NotionSourceSelector";
 import { YouTubeInput } from "../../components/YoutubeInput";
 import { SummaryTypeSelector } from "../../components/SummaryTypeSelector";
+import { OutputTypeSelector } from "../../components/OutputTypeSelector";
+import { VisualStyleSelector } from "../../components/VisualStyleSelector";
 import { NotionSource } from "@/types";
 import { HistorySidebar } from "@/components/history-sidebar";
 import { Summary } from "@/lib/db/models/summary";
 import { HistoryCard } from "@/components/history-card";
 import { useApi } from "@/hooks/useApi";
 import { toast } from "sonner";
-import { FileText, BookOpen, Sparkles, LayoutTemplate, Globe, Database } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Label } from "@/components/ui/label";
+import { Sparkles } from "lucide-react";
 import HeroSection from "@/components/hero-section";
 
 export default function AppPage() {
@@ -27,6 +27,7 @@ export default function AppPage() {
     const [outputType, setOutputType] = useState<'notion' | 'pdf'>('notion');
     const [targetSource, setTargetSource] = useState<NotionSource | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [useIcons, setUseIcons] = useState(true);
 
     // History State
     const [selectedSummary, setSelectedSummary] = useState<Summary | null>(null);
@@ -52,6 +53,7 @@ export default function AppPage() {
                     outputType,
                     targetSourceId: targetSource?.id,
                     targetSourceType: targetSource?.type,
+                    useIcons
                 }),
             });
 
@@ -88,21 +90,15 @@ export default function AppPage() {
     };
 
     return (
-        <div className="relative"> {/* Add relative here */}
-
-
+        <div className="relative">
             <div className="flex h-[calc(100vh-65px)] overflow-hidden relative z-10">
-
                 <HistorySidebar
                     selectedId={selectedSummary?._id?.toString() || null}
                     onSelect={setSelectedSummary}
                     refreshTrigger={refreshTrigger}
                 />
-
                 <main className="flex-1 overflow-y-auto relative z-10">
-
                     <div className="container max-w-7xl py-12 md:py-16 px-6 md:px-12 flex flex-col items-center justify-center min-h-[80%]">
-
                         {selectedSummary ? (
                             <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <Button
@@ -122,24 +118,18 @@ export default function AppPage() {
                             <div className="w-full space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
                                 {/* Hero Section */}
                                 <HeroSection />
-
                                 {/* Main Input Area - Wider */}
                                 <div className="w-full max-w-6xl mx-auto space-y-8">
-
                                     {/* YouTube Input + Generate Button on Same Line */}
                                     <div className="flex gap-3 items-start">
                                         <div className="flex-1 relative group">
-
                                             <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
-
                                             <div className="relative bg-background/80 backdrop-blur-xl rounded-xl border border-border/50 shadow-lg p-2">
-
                                                 <YouTubeInput
                                                     value={youtubeUrl}
                                                     onChange={setYoutubeUrl}
                                                 />
                                             </div>
-
                                         </div>
 
                                         <Button
@@ -163,81 +153,45 @@ export default function AppPage() {
                                     <div className="grid gap-6 md:grid-cols-3">
                                         {/* Column 1: Summary Style */}
                                         <div className="space-y-3">
-                                            <Label className="text-sm font-medium flex items-center gap-2 text-muted-foreground ml-1">
-                                                <LayoutTemplate className="w-4 h-4" />
-                                                Summary Style
-                                            </Label>
-                                            <div className="bg-background/50 backdrop-blur-sm rounded-lg border border-border/50 p-1">
-                                                <SummaryTypeSelector
-                                                    value={summaryType}
-                                                    onChange={setSummaryType}
-                                                />
-                                            </div>
+                                            <SummaryTypeSelector
+                                                value={summaryType}
+                                                onChange={setSummaryType}
+                                            />
                                         </div>
-                                        {/* Column 3: Output Type */}
+
+                                        {/* Column 2: Output Type */}
                                         <div className="space-y-3">
-                                            <Label className="text-sm font-medium flex items-center gap-2 text-muted-foreground ml-1">
-                                                <Database className="w-4 h-4" />
-                                                Output Format
-                                            </Label>
-                                            <Tabs
+                                            <OutputTypeSelector
                                                 value={outputType}
-                                                onValueChange={(val: any) => setOutputType(val as 'notion' | 'pdf')}
-                                                className="w-full"
-                                            >
-                                                <TabsList className="bg-muted/50 p-1 h-10 w-full grid grid-cols-2">
-                                                    <TabsTrigger value="notion" className="text-sm px-3 h-8 gap-1.5">
-                                                        <BookOpen className="h-4 w-4" />
-                                                        Notion
-                                                    </TabsTrigger>
-                                                    <TabsTrigger value="pdf" className="text-sm px-3 h-8 gap-1.5">
-                                                        <FileText className="h-4 w-4" />
-                                                        PDF
-                                                    </TabsTrigger>
-                                                </TabsList>
-                                            </Tabs>
+                                                onChange={setOutputType}
+                                            />
 
                                             {/* Notion Destination - Full Width Below */}
-
-                                            <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3">
-
-                                                <NotionSourceSelector
-                                                    value={targetSource}
-                                                    onChange={setTargetSource}
-                                                    disabled={outputType !== 'notion'}
-                                                />
-                                            </div>
-
+                                            <NotionSourceSelector
+                                                value={targetSource}
+                                                onChange={setTargetSource}
+                                                disabled={outputType !== 'notion'}
+                                            />
                                         </div>
 
-                                        {/* Column 2: Language */}
+                                        {/* Column 3: Language & Visual Style */}
                                         <div className="space-y-3">
-                                            <Label className="text-sm font-medium flex items-center gap-2 text-muted-foreground ml-1">
-                                                <Globe className="w-4 h-4" />
-                                                Language
-                                            </Label>
-                                            <div className="bg-background/50 backdrop-blur-sm rounded-lg border border-border/50 p-1">
-                                                <LanguageSelector
-                                                    value={language}
-                                                    onChange={setLanguage}
-                                                />
-                                            </div>
+                                            <LanguageSelector
+                                                value={language}
+                                                onChange={setLanguage}
+                                            />
+                                            <VisualStyleSelector
+                                                useIcons={useIcons}
+                                                onChange={setUseIcons}
+                                            />
                                         </div>
-
-
                                     </div>
-
                                 </div>
-
                             </div>
                         )}
-
                     </div>
-
                 </main>
-
             </div>
-
         </div>
     );
 }

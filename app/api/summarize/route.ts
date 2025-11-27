@@ -25,7 +25,7 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json() as SummarizeRequest;
-        const { youtubeUrl, language, targetSourceId, targetSourceType, summaryType, outputType } = body;
+        const { youtubeUrl, language, targetSourceId, targetSourceType, summaryType, outputType, useIcons } = body;
 
         if (!youtubeUrl || !outputType) {
             return err(
@@ -62,6 +62,7 @@ export async function POST(req: Request) {
             transcript: transcriptResult?.content?.toString() || "",
             language: transcriptResult?.lang || language,
             summaryType: summaryType as any,
+            useIcons: useIcons || false,
         });
 
         if (!resultSummary) {

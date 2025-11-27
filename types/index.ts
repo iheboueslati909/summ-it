@@ -13,6 +13,7 @@ export interface SummarizeRequest {
     targetSourceId?: string;
     targetSourceType?: 'page' | 'database';
     summaryType?: string;
+    useIcons?: boolean;
 }
 
 export interface PDFSummaryResponse {

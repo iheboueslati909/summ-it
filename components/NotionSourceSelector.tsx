@@ -14,7 +14,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Sticker } from "lucide-react";
+import { Sticker, StickyNote } from "lucide-react";
 
 interface NotionSourceSelectorProps {
     value: NotionSource | null;
@@ -78,8 +78,9 @@ export function NotionSourceSelector({ value, onChange, disabled }: NotionSource
     if (error) {
         return (
             <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium flex items-center gap-2">
-                    Save to Notion
+                <Label className="text-sm font-medium flex items-center gap-2 text-muted-foreground ml-1">
+                    <StickyNote className="w-4 h-4" />
+                    Save to notion
                 </Label>
                 <div className="flex items-center justify-between p-2.5 text-sm text-destructive bg-destructive/10 rounded-md">
                     <span>{error}</span>
@@ -125,7 +126,8 @@ export function NotionSourceSelector({ value, onChange, disabled }: NotionSource
     return (
         <div className="flex flex-col gap-2">
             <Label className="text-sm font-medium flex items-center gap-2 text-muted-foreground ml-1">
-                Save to Notion
+                <StickyNote className="w-4 h-4" />
+                Save to notion
             </Label>
             <Select disabled={disabled} value={value?.id || ''} onValueChange={handleValueChange}>
                 <SelectTrigger className=" bg-white">

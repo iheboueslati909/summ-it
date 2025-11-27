@@ -1,5 +1,12 @@
 import { SummaryType } from "@/lib/ai/types";
 
+export interface synthesisPromptSettings {
+    summaryType: SummaryType;
+    useIcons: boolean;
+    summaries: string[];
+    language: string;
+}
+
 export const SUMMARY_TYPES: { value: SummaryType; label: string; description: string }[] = [
     { value: 'informative', label: 'Informative', description: 'Objective report on main points' },
     { value: 'descriptive', label: 'Descriptive', description: 'Objective report describing content' },
@@ -64,19 +71,23 @@ CRITICAL INSTRUCTIONS:
 };
 
 export const GET_SYNTHESIS_PROMPT = (
-    summaries: string[],
-    language: string,
-    type: SummaryType = 'informative'
-) => `
-Create a ${type} summary in ${language} using markdown format.
+    synthesisPromptSettings: synthesisPromptSettings
+) => {
+    const iconInstruction = synthesisPromptSettings.useIcons
+        ? "- Use relevant emojis/icons sparingly to enhance headers and bullet points"
+        : "- Do NOT use any emojis, icons, or symbols";
 
-${PROMPT_TEMPLATES[type]}
+    return `
+Create a ${synthesisPromptSettings.summaryType} summary in ${synthesisPromptSettings.language} using markdown format.
+
+${PROMPT_TEMPLATES[synthesisPromptSettings.summaryType]}
 
 STRUCTURE YOUR OUTPUT:
 - Use ## for main section headers
 - Use **bold** for key terms, names, and statistics  
 - Use - for bullet points when listing multiple items
 - Write 4-12 paragraphs organized into logical sections
+${iconInstruction}
 
 CONTENT REQUIREMENTS:
 - Write directly as the final document (not "this summary discusses...")
@@ -85,8 +96,11 @@ CONTENT REQUIREMENTS:
 - Use tables if convenient
 
 SOURCE SECTIONS:
-${summaries.map((s, i) => `## Section ${i + 1}\n${s}`).join("\n\n")}
+${synthesisPromptSettings.summaries
+            .map((s, i) => `## Section ${i + 1}\n${s}`)
+            .join("\n\n")}
 
 Write the formatted summary below:
 
 `;
+};

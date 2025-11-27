@@ -1,6 +1,7 @@
 import { Label } from "@/components/ui/label";
 import { SUMMARY_TYPES } from "@/lib/ai";
 import { cn } from "@/lib/utils";
+import { LayoutTemplate } from "lucide-react";
 
 interface SummaryTypeSelectorProps {
     value: string;
@@ -11,7 +12,11 @@ export function SummaryTypeSelector({ value, onChange }: SummaryTypeSelectorProp
     const selected = SUMMARY_TYPES.find((t) => t.value === value);
 
     return (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
+            <Label className="text-sm font-medium flex items-center gap-2 text-muted-foreground ml-1">
+                <LayoutTemplate className="w-4 h-4" />
+                Summary Style
+            </Label>
             {/* BUTTON GROUP */}
             <div className="flex flex-wrap gap-2">
                 {SUMMARY_TYPES.map((type) => {

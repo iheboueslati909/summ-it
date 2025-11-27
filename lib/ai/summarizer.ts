@@ -56,11 +56,13 @@ export async function summarizeChunk(
 export async function summarizeTranscript({
     transcript,
     language,
-    summaryType = 'informative'
+    summaryType = 'informative',
+    useIcons = false
 }: {
     transcript: string;
     language: string;
     summaryType?: SummaryType;
+    useIcons: boolean;
 }): Promise<{ summary: string, title: string } | null> {
 
     verifyTranscript(transcript);
@@ -94,12 +96,13 @@ export async function summarizeTranscript({
         if (!model) throw new Error("LLM model not initialized");
 
         await acquireToken();
-
+        console.log("******************** USE ICONS ,", useIcons)
+        console.log("************** the prompt is ", GET_SYNTHESIS_PROMPT({ summaries: partialSummaries, language, summaryType, useIcons }))
         const synthesis = await model.generateContent({
             contents: [
                 {
                     role: "user",
-                    parts: [{ text: GET_SYNTHESIS_PROMPT(partialSummaries, language, summaryType) }],
+                    parts: [{ text: GET_SYNTHESIS_PROMPT({ summaries: partialSummaries, language, summaryType, useIcons }) }],
                 },
             ],
             generationConfig: { temperature: 0.4, topP: 0.95 }
