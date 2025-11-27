@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Pencil, Trash2, ExternalLink, FileText, Calendar, Video } from "lucide-react";
 import { Summary } from "@/lib/db/models/summary";
@@ -17,17 +17,30 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { remark } from "remark";
+import html from "remark-html";
 
-interface HistoryCardProps {
+interface PreviewContentProps {
     summary: Summary;
     onUpdate: () => void;
     variant?: 'card' | 'detail';
 }
 
-export function HistoryCard({ summary, onUpdate, variant = 'card' }: HistoryCardProps) {
+export function PreviewContent({ summary, onUpdate, variant = 'card' }: PreviewContentProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [title, setTitle] = useState(summary.title);
     const [isLoading, setIsLoading] = useState(false);
+    const [htmlContent, setHtmlContent] = useState("");
+
+    useEffect(() => {
+        async function processMarkdown() {
+            const result = await remark()
+                .use(html)
+                .process(summary.content);
+            setHtmlContent(result.toString());
+        }
+        processMarkdown();
+    }, [summary.content]);
 
     const handleUpdateTitle = async () => {
         if (title === summary.title) {
@@ -137,10 +150,10 @@ export function HistoryCard({ summary, onUpdate, variant = 'card' }: HistoryCard
                 </div>
 
                 <div className={cn(
-                    "text-sm text-foreground",
-                    variant === 'card' ? "line-clamp-3 text-muted-foreground" : "whitespace-pre-wrap leading-relaxed"
+                    "text-sm text-foreground prose prose-sm max-w-none dark:prose-invert",
+                    variant === 'card' && "line-clamp-3"
                 )}>
-                    {summary.content}
+                    <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
                 </div>
             </CardContent>
             <CardFooter className="pt-0 flex justify-between border-t p-4 bg-muted/20">
@@ -171,8 +184,8 @@ export function HistoryCard({ summary, onUpdate, variant = 'card' }: HistoryCard
                                     </a>
                                 </div>
                             </DialogHeader>
-                            <div className="mt-4 whitespace-pre-wrap leading-relaxed">
-                                {summary.content}
+                            <div className="mt-4 prose prose-sm max-w-none dark:prose-invert">
+                                <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
                             </div>
                         </DialogContent>
                     </Dialog>

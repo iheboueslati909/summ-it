@@ -11,7 +11,7 @@ import { VisualStyleSelector } from "../../components/VisualStyleSelector";
 import { NotionSource } from "@/types";
 import { HistorySidebar } from "@/components/history-sidebar";
 import { Summary } from "@/lib/db/models/summary";
-import { HistoryCard } from "@/components/history-card";
+import { PreviewContent } from "@/components/preview-content";
 import { useApi } from "@/hooks/useApi";
 import { toast } from "sonner";
 import { Sparkles } from "lucide-react";
@@ -108,7 +108,7 @@ export default function AppPage() {
                                 >
                                     ← Back to Create
                                 </Button>
-                                <HistoryCard
+                                <PreviewContent
                                     summary={selectedSummary}
                                     onUpdate={handleHistoryUpdate}
                                     variant="detail"
