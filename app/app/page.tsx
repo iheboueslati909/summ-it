@@ -204,7 +204,7 @@ export default function AppPage() {
                                                 <NotionSourceSelector
                                                     value={targetSource}
                                                     onChange={setTargetSource}
-                                                    disabled={outputType === 'notion'}
+                                                    disabled={outputType !== 'notion'}
                                                 />
                                             </div>
 
