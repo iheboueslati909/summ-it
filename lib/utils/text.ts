@@ -25,9 +25,17 @@ export function chunkTextSmart(text: string, maxSize = MAX_CHARS_PER_CHUNK): str
 }
 
 export function extractTitle(text: string) {
-    return text.split(/[.!?]/, 1)[0].substring(0, 150) || "Untitled Summary";
+    if (!text) return "Untitled Summary";
 
+    const match = text.match(/(.+?)(?<!\b[A-Z])([.!?])\s+(?=[A-Z])/);
+
+    let sentence = match ? match[1] + match[2] : text;
+
+    sentence = sentence.trim().substring(0, 150);
+
+    return sentence || "Untitled Summary";
 }
+
 
 export function verifyTranscript(transcript: string) {
     if (!transcript) throw new Error("Transcript is required");
