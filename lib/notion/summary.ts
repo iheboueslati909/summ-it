@@ -1,4 +1,4 @@
-import { NotionClient, splitTextIntoBlocks, buildNotionBlocks } from './client';
+import { NotionClient } from './client';
 
 export interface SaveSummaryToNotionParams {
     notion: NotionClient;
@@ -6,7 +6,7 @@ export interface SaveSummaryToNotionParams {
     targetSourceType: 'database' | 'page';
     youtubeUrl: string;
     title: string;
-    summary: string;
+    blocks: any[];
 }
 
 export interface SaveSummaryToNotionResult {
@@ -21,10 +21,7 @@ export interface SaveSummaryToNotionResult {
 export async function saveSummaryToNotion(
     params: SaveSummaryToNotionParams
 ): Promise<SaveSummaryToNotionResult> {
-    const { notion, targetSourceId, targetSourceType, youtubeUrl, title, summary } = params;
-
-    const textBlocks = splitTextIntoBlocks(summary);
-    const notionBlocks = buildNotionBlocks(textBlocks);
+    const { notion, targetSourceId, targetSourceType, youtubeUrl, title, blocks } = params;
 
     let notionUrl = "";
 
@@ -41,13 +38,13 @@ export async function saveSummaryToNotion(
                     ],
                 },
             },
-            notionBlocks
+            blocks
         );
         notionUrl = created.url;
     }
 
     if (targetSourceType === "page") {
-        const blocks = [
+        const pageBlocks = [
             {
                 object: "block" as const,
                 type: "heading_2" as const,
@@ -57,10 +54,10 @@ export async function saveSummaryToNotion(
                     ],
                 },
             },
-            ...notionBlocks,
+            ...blocks,
         ];
 
-        await notion.appendBlocks(targetSourceId, blocks);
+        await notion.appendBlocks(targetSourceId, pageBlocks);
         notionUrl = `https://www.notion.so/${targetSourceId.replace(/-/g, "")}`;
     }
 

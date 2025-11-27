@@ -1,6 +1,4 @@
-"use client";
-
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Pencil, Trash2, ExternalLink, FileText, Calendar, Video } from "lucide-react";
 import { Summary } from "@/lib/db/models/summary";
@@ -17,8 +15,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { remark } from "remark";
-import html from "remark-html";
+import { NotionBlockRenderer } from "./notion-block-renderer";
+import { NotionBlockJson } from "@/lib/ai/json-types";
 
 interface PreviewContentProps {
     summary: Summary;
@@ -30,16 +28,18 @@ export function PreviewContent({ summary, onUpdate, variant = 'card' }: PreviewC
     const [isEditing, setIsEditing] = useState(false);
     const [title, setTitle] = useState(summary.title);
     const [isLoading, setIsLoading] = useState(false);
-    const [htmlContent, setHtmlContent] = useState("");
 
-    useEffect(() => {
-        async function processMarkdown() {
-            const result = await remark()
-                .use(html)
-                .process(summary.content);
-            setHtmlContent(result.toString());
+    // Parse blocks or fallback to text
+    const { blocks, plainText } = useMemo(() => {
+        try {
+            const parsed = JSON.parse(summary.content);
+            if (Array.isArray(parsed)) {
+                return { blocks: parsed as NotionBlockJson[], plainText: null };
+            }
+            return { blocks: null, plainText: summary.content };
+        } catch {
+            return { blocks: null, plainText: summary.content };
         }
-        processMarkdown();
     }, [summary.content]);
 
     const handleUpdateTitle = async () => {
@@ -150,10 +150,14 @@ export function PreviewContent({ summary, onUpdate, variant = 'card' }: PreviewC
                 </div>
 
                 <div className={cn(
-                    "text-sm text-foreground prose prose-sm max-w-none dark:prose-invert",
-                    variant === 'card' && "line-clamp-3"
+                    "text-sm text-foreground",
+                    variant === 'card' && "line-clamp-3 max-h-[100px] overflow-hidden mask-linear-fade"
                 )}>
-                    <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
+                    {blocks ? (
+                        <NotionBlockRenderer blocks={blocks} />
+                    ) : (
+                        <div className="whitespace-pre-wrap">{plainText}</div>
+                    )}
                 </div>
             </CardContent>
             <CardFooter className="pt-0 flex justify-between border-t p-4 bg-muted/20">
@@ -184,8 +188,12 @@ export function PreviewContent({ summary, onUpdate, variant = 'card' }: PreviewC
                                     </a>
                                 </div>
                             </DialogHeader>
-                            <div className="mt-4 prose prose-sm max-w-none dark:prose-invert">
-                                <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
+                            <div className="mt-4">
+                                {blocks ? (
+                                    <NotionBlockRenderer blocks={blocks} />
+                                ) : (
+                                    <div className="whitespace-pre-wrap">{plainText}</div>
+                                )}
                             </div>
                         </DialogContent>
                     </Dialog>

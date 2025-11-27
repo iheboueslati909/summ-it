@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { CHUNK_SUMMARY_PROMPT, GET_SYNTHESIS_PROMPT } from "./prompts";
 import { SummaryType } from "./types";
+import { NotionBlockJson } from "./json-types";
 import { acquireToken } from "../rate-limiter";
 import { chunkTextSmart, extractTitle, verifyTranscript } from "../utils";
 
@@ -63,7 +64,7 @@ export async function summarizeTranscript({
     language: string;
     summaryType?: SummaryType;
     useIcons: boolean;
-}): Promise<{ summary: string, title: string } | null> {
+}): Promise<{ blocks: NotionBlockJson[], title: string } | null> {
 
     verifyTranscript(transcript);
 
@@ -87,9 +88,20 @@ export async function summarizeTranscript({
     try {
 
         if (USE_MOCK_LLM) {
-            const mockSummary = `MOCK SYNTHESIS - Combined ${partialSummaries.length} chunk summaries:\n${partialSummaries.join('\n')}`;
-            const mockTitle = `MOCK TITLE - ${summaryType} Summary`;
-            return { summary: mockSummary, title: mockTitle };
+            const mockBlocks: NotionBlockJson[] = [
+                {
+                    type: 'heading_1',
+                    text: { content: `MOCK TITLE - ${summaryType} Summary` }
+                },
+                {
+                    type: 'paragraph',
+                    text: { content: `MOCK SYNTHESIS - Combined ${partialSummaries.length} chunk summaries` }
+                }
+            ];
+            return {
+                blocks: mockBlocks,
+                title: `MOCK TITLE - ${summaryType} Summary`
+            };
         }
 
         const model = getModel();
@@ -111,9 +123,36 @@ export async function summarizeTranscript({
         const final = synthesis?.response?.text?.()?.trim();
         if (!final) throw new Error("Empty synthesis output");
 
-        let title = extractTitle(final);
+        // Parse JSON response
+        let blocks: NotionBlockJson[];
+        try {
+            // Remove markdown code fences if present
+            const jsonText = final.replace(/^```json\n?/i, '').replace(/\n?```$/i, '').trim();
+            blocks = JSON.parse(jsonText);
 
-        return { summary: final, title };
+            // Validate it's an array
+            if (!Array.isArray(blocks)) {
+                throw new Error("Expected JSON array");
+            }
+        } catch (parseError) {
+            console.error("❌ Failed to parse JSON response:", parseError);
+            console.error("Raw response:", final);
+            throw new Error("Invalid JSON response from LLM");
+        }
+
+        // Extract title from first heading block or use fallback
+        let title = "Summary";
+        const firstHeading = blocks.find(block =>
+            block.type === 'heading_1' ||
+            block.type === 'heading_2' ||
+            block.type === 'heading_3'
+        );
+
+        if (firstHeading && 'text' in firstHeading) {
+            title = firstHeading.text.content;
+        }
+
+        return { blocks, title };
 
     } catch (err) {
         console.error("❌ Synthesis failed", err);

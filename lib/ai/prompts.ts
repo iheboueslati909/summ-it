@@ -78,29 +78,28 @@ export const GET_SYNTHESIS_PROMPT = (
         : "- Do NOT use any emojis, icons, or symbols";
 
     return `
-Create a ${synthesisPromptSettings.summaryType} summary in ${synthesisPromptSettings.language} using markdown format.
+Create a ${synthesisPromptSettings.summaryType} summary in ${synthesisPromptSettings.language}.
 
 ${PROMPT_TEMPLATES[synthesisPromptSettings.summaryType]}
 
-STRUCTURE YOUR OUTPUT:
-- Use ## for main section headers
-- Use **bold** for key terms, names, and statistics  
-- Use - for bullet points when listing multiple items
-- Write 4-12 paragraphs organized into logical sections
-${iconInstruction}
+OUTPUT FORMAT:
+- Respond in JSON only.
+- Each JSON object represents a Notion block.
+- Block types: heading_1, heading_2, heading_3, paragraph, bulleted_list_item, numbered_list_item, table.
+- For text formatting, use "bold": true/false, "italic": true/false.
+- Use "children" for nested blocks (e.g., bullets under paragraphs).
+- Use "tableRows" with "cells" array for tables.
 
 CONTENT REQUIREMENTS:
-- Write directly as the final document (not "this summary discusses...")
 - Merge redundant information across sections
 - Preserve specific details: names, dates, numbers, technical terms
-- Use tables if convenient
+- Use emojis/icons if allowed by settings: ${iconInstruction}
 
 SOURCE SECTIONS:
 ${synthesisPromptSettings.summaries
-            .map((s, i) => `## Section ${i + 1}\n${s}`)
+            .map((s, i) => `Section ${i + 1}: ${s}`)
             .join("\n\n")}
 
-Write the formatted summary below:
-
+Write the summary below in JSON following the above rules:
 `;
 };
